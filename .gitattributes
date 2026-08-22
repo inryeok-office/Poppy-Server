@@ -1,0 +1,6 @@
+/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+
+/CLAUDE.md text eol=lf
+/AGENTS.md text eol=lf
