@@ -1,0 +1,19 @@
+[
+  { "name": "feature", "color": "1D76DB", "description": "새로운 기능 작업" },
+  { "name": "bug", "color": "D73A4A", "description": "버그 수정 작업" },
+  { "name": "refactor", "color": "7057FF", "description": "구조 개선 작업" },
+  { "name": "chore", "color": "6E7781", "description": "설정 및 환경 작업" },
+  { "name": "documentation", "color": "0E8AEB", "description": "문서 작업" },
+  { "name": "ci", "color": "343A40", "description": "CI/GitHub Actions 관련 작업" },
+  { "name": "test", "color": "2DA44E", "description": "테스트 관련 작업" },
+  { "name": "release", "color": "F97316", "description": "develop에서 main으로의 배포 준비 PR" },
+  { "name": "domain: session", "color": "0969DA", "description": "session 도메인 변경" },
+  { "name": "domain: mission", "color": "E3B341", "description": "mission 도메인 변경" },
+  { "name": "domain: simulation", "color": "8250DF", "description": "simulation 도메인 변경" },
+  { "name": "domain: execution", "color": "CF222E", "description": "execution 도메인 변경" },
+  { "name": "domain: robot", "color": "FB8F44", "description": "robot 도메인 변경" },
+  { "name": "domain: admin", "color": "24292F", "description": "admin 도메인 변경" },
+  { "name": "domain: agent", "color": "1A7F37", "description": "agent 도메인 변경" },
+  { "name": "breaking-change", "color": "B60205", "description": "기존 API/계약을 깨뜨리는 변경" },
+  { "name": "dependencies", "color": "0E8A8A", "description": "빌드 설정 또는 의존성 변경" }
+]

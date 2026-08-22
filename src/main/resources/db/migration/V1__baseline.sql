@@ -1,0 +1,1 @@
+-- POPPY 서버 Flyway baseline. 실제 도메인 스키마는 해당 기능 구현 시점에 추가한다.
