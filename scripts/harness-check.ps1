@@ -42,7 +42,12 @@ $requiredDocs = @(
     "SECURITY.md",
     "docs/git-workflow.md",
     "docs/commit-convention.md",
-    "docs/ai-workflow.md"
+    "docs/ai-workflow.md",
+    "docs/architecture.md",
+    "docs/configuration.md",
+    "docs/api-convention.md",
+    "docs/testing.md",
+    "docs/ci.md"
 )
 
 foreach ($doc in $requiredDocs) {
