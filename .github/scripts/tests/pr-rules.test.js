@@ -100,6 +100,16 @@ test("breaking change 표기가 없으면 감지하지 않는다", () => {
   assert.equal(detectBreakingChange("feat: 정상 변경", "평범한 설명"), false);
 });
 
+test("콜론 없이 breaking change를 설명하는 문장은 오탐하지 않는다", () => {
+  assert.equal(
+    detectBreakingChange(
+      "ci(pr-metadata): PR 담당자·리뷰어·라벨 지정을 자동화한다",
+      "breaking change 감지 로직을 추가한다. breaking change 테스트도 포함한다.",
+    ),
+    false,
+  );
+});
+
 test("PR 종합 상태에서 자동 라벨 집합을 계산한다", () => {
   const desired = computeDesiredAutoLabels({
     baseRef: "develop",
