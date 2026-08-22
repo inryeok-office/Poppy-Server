@@ -45,6 +45,7 @@ required_docs=(
   "docs/api-convention.md"
   "docs/testing.md"
   "docs/ci.md"
+  "docs/pull-request-convention.md"
 )
 
 for doc in "${required_docs[@]}"; do
