@@ -66,3 +66,15 @@ Fork PR 등 Secret이 제공되지 않는 컨텍스트에서는 알림을 생략
 ### 테스트
 
 `scripts/test-discord-notify.sh`는 실제 Webhook 전송 없이 성공/실패/취소 payload 생성, JSON 유효성, 필수 필드, allowed mentions 비활성화, 문자열 escape, 길이 제한, Secret 미설정 시 skip 동작을 검증한다. CI의 `Discord payload tests` 단계에서 동일하게 실행된다.
+
+## 라벨 동기화
+
+`.github/labels.json`이 승인된 커스텀 라벨의 단일 기준이다. `.github/workflows/sync-labels.yml`이 `main`/`develop` push 중 `.github/labels.json`이 변경된 경우와 `workflow_dispatch` 수동 실행에서 `.github/scripts/sync-labels.js`를 실행해 저장소 라벨을 이 파일과 동일하게 맞춘다.
+
+- 승인 목록에 없는 이름의 기존 라벨은 삭제된다.
+- 승인된 라벨이 없으면 생성되고, 색상/설명이 다르면 갱신된다.
+- 동일 상태에서 재실행하면 변경이 발생하지 않는다(멱등성).
+- 삭제된 라벨이 사용 중이던 Issue/PR 번호를 Job Summary에 기록한다.
+- 워크플로 권한은 `issues: write`, `contents: read`만 사용하며, `pull_request` 이벤트로는 트리거하지 않는다(Fork PR이 라벨 정책 파일을 임의로 실행할 수 없음).
+
+라벨 동기화 로직은 `.github/scripts/labels.js`(순수 계산)와 `.github/scripts/sync-labels.js`(GitHub API 실행)로 분리되어 있으며, `node --test ".github/scripts/tests/*.test.js"`로 로컬/CI에서 동일하게 테스트한다.
