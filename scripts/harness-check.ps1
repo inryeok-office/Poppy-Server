@@ -38,6 +38,7 @@ if ((Test-Path "CLAUDE.md" -PathType Leaf) -and (Test-Path "AGENTS.md" -PathType
 }
 
 $requiredDocs = @(
+    "README.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
     "docs/git-workflow.md",
