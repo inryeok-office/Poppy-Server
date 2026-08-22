@@ -37,3 +37,7 @@
 ## 직접 commit/push 금지
 
 `main`과 `develop`에는 직접 commit하거나 push하지 않는다. 모든 변경은 Issue와 PR을 통해 반영한다.
+
+## PR 자동화
+
+develop 대상 PR을 생성하면 작성자 Assignee 지정, Reviewer 자동 요청, 브랜치·경로 기반 라벨 지정이 자동으로 이루어진다. PR 본문에 `Closes #{이슈번호}`를 작성하면 해당 PR이 develop에 병합될 때 연결된 Issue가 자동으로 종료된다. 자세한 내용은 `docs/pull-request-convention.md`와 `docs/ci.md`를 참고한다.

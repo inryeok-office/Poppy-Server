@@ -128,6 +128,19 @@ src/main/kotlin/{base-package}
 - push 전에 테스트와 빌드 실행
 - PR 생성 후 CI 확인
 
+## GitHub 협업 자동화
+
+- PR 생성 시 작성자를 Assignee로 지정한다(자동화가 처리하지만, 직접 확인한다).
+- Reviewer는 `s26059-maker`, `bongbonggoo`, `hej090224` 중 작성자를 제외한 인원을 요청한다.
+- 저장소에서 승인된 커스텀 라벨(`.github/labels.json`)만 사용한다. 임의로 새 라벨을 만들지 않는다.
+- 브랜치와 변경 파일에 맞는 라벨을 사용한다(`docs/pull-request-convention.md` 참고).
+- develop 대상 PR 본문에 연결 Issue를 `Closes #{이슈번호}` 형식으로 작성한다.
+- 하나의 PR에서 관련 없는 Issue를 종료하지 않는다.
+- main 대상 PR을 자동으로 병합하지 않는다.
+- 자동화 실패(Reviewer 요청 실패, 라벨 적용 실패 등)를 무시하거나 수동으로 성공했다고 보고하지 않는다. Job Summary와 실제 상태를 확인한다.
+- PR 메타데이터 자동화(Assignee/Reviewer/라벨)가 실제로 적용됐는지 merge 전에 확인한다.
+- Claude와 Codex는 이 섹션의 GitHub 작업 규칙을 동일하게 따른다.
+
 ## 커밋 규칙
 
 Conventional Commits 형식(`type(scope): subject`)을 사용한다. 자세한 내용은 `docs/commit-convention.md`를 따른다.
