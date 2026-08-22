@@ -48,7 +48,8 @@ $requiredDocs = @(
     "docs/configuration.md",
     "docs/api-convention.md",
     "docs/testing.md",
-    "docs/ci.md"
+    "docs/ci.md",
+    "docs/pull-request-convention.md"
 )
 
 foreach ($doc in $requiredDocs) {
