@@ -39,6 +39,11 @@ required_docs=(
   "docs/git-workflow.md"
   "docs/commit-convention.md"
   "docs/ai-workflow.md"
+  "docs/architecture.md"
+  "docs/configuration.md"
+  "docs/api-convention.md"
+  "docs/testing.md"
+  "docs/ci.md"
 )
 
 for doc in "${required_docs[@]}"; do
