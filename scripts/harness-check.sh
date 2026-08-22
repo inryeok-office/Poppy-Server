@@ -34,6 +34,7 @@ if [ -f "CLAUDE.md" ] && [ -f "AGENTS.md" ]; then
 fi
 
 required_docs=(
+  "README.md"
   "CONTRIBUTING.md"
   "SECURITY.md"
   "docs/git-workflow.md"
