@@ -81,7 +81,7 @@ function detectBreakingChange(title, body) {
   if (/^[a-z]+(\([^)]*\))?!:/i.test(normalizedTitle)) {
     return true;
   }
-  if (/breaking[ -]change/i.test(normalizedBody)) {
+  if (/breaking[ -]change\s*:/i.test(normalizedBody)) {
     return true;
   }
   return false;
