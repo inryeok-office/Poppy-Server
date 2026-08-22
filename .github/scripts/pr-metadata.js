@@ -137,6 +137,16 @@ async function applyLabels({ client, pr, summary }) {
   }
 }
 
+async function applyPrMetadata({ client, pr, summary, requestReviewers = true }) {
+  await applyAssignee({ client, pr, summary });
+  if (requestReviewers) {
+    await applyReviewers({ client, pr, summary });
+  } else {
+    summary.push("- Reviewer: 이미 병합/종료된 PR이라 새로 요청하지 않음");
+  }
+  await applyLabels({ client, pr, summary });
+}
+
 async function run({ token, repository, eventPayload }) {
   const pr = eventPayload.pull_request;
   if (!pr) {
@@ -146,9 +156,7 @@ async function run({ token, repository, eventPayload }) {
   const client = createGitHubClient({ token, repository });
   const summary = [`## PR 메타데이터 자동화 결과 (#${pr.number})`, ""];
 
-  await applyAssignee({ client, pr, summary });
-  await applyReviewers({ client, pr, summary });
-  await applyLabels({ client, pr, summary });
+  await applyPrMetadata({ client, pr, summary });
 
   const summaryText = summary.join("\n") + "\n";
   console.log(summaryText);
@@ -170,4 +178,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, applyPrMetadata, applyAssignee, applyReviewers, applyLabels, fetchChangedFilePaths };
