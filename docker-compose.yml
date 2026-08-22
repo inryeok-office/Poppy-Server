@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-poppy}
+      POSTGRES_USER: ${DB_USERNAME:-poppy}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-poppy}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - poppy-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-poppy} -d ${DB_NAME:-poppy}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  poppy-postgres-data:
