@@ -39,6 +39,8 @@ class RobotEntity(
     var safetyProfileId: UUID? = null,
     @Column(name = "is_external", nullable = false)
     var isExternal: Boolean = false,
+    @Column(nullable = false)
+    var active: Boolean = true,
     @Column(name = "connection_status", nullable = false, columnDefinition = "text")
     @Enumerated(EnumType.STRING)
     var connectionStatus: RobotConnectionStatus = RobotConnectionStatus.OFFLINE,

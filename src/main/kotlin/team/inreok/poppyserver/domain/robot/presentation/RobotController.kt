@@ -6,6 +6,7 @@ import java.util.UUID
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
@@ -103,21 +104,28 @@ data class RobotRegistrationRequest(
 }
 
 data class RobotUpdateRequest(
-    @field:NotBlank val alias: String? = null,
-    @field:NotBlank val firmwareVersion: String? = null,
-    @field:NotBlank val sdkVersion: String? = null,
-    @field:NotNull val capabilities: List<@Valid RobotCapabilityRequest>? = null,
+    @field:Pattern(regexp = ".*\\S.*") val alias: String? = null,
+    @field:Pattern(regexp = ".*\\S.*") val firmwareVersion: String? = null,
+    @field:Pattern(regexp = ".*\\S.*") val sdkVersion: String? = null,
+    val capabilities: List<@Valid RobotCapabilityRequest>? = null,
     val safetyProfileId: UUID? = null,
     val operationalStatus: RobotOperationStatus? = null,
 ) {
-    fun toCommand(): UpdateRobotCommand = UpdateRobotCommand(
-        alias = alias,
-        firmwareVersion = firmwareVersion,
-        sdkVersion = sdkVersion,
-        capabilities = requireNotNull(capabilities).map { it.toModel() },
-        safetyProfileId = safetyProfileId,
-        operationStatus = operationalStatus,
-    )
+    fun toCommand(): UpdateRobotCommand {
+        if (alias == null && firmwareVersion == null && sdkVersion == null &&
+            capabilities == null && safetyProfileId == null && operationalStatus == null
+        ) {
+            throw ApplicationException(ErrorCode.INVALID_INPUT)
+        }
+        return UpdateRobotCommand(
+            alias = alias,
+            firmwareVersion = firmwareVersion,
+            sdkVersion = sdkVersion,
+            capabilities = capabilities?.map { it.toModel() },
+            safetyProfileId = safetyProfileId,
+            operationStatus = operationalStatus,
+        )
+    }
 }
 
 data class RobotCapabilityRequest(

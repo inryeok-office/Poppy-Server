@@ -23,6 +23,7 @@ class RobotPersistenceAdapter(
         entity.updateFrom(robot)
         if (existing == null) {
             entityManager.persist(entity)
+            entityManager.flush()
         }
         return entity.toDomain()
     }
@@ -52,19 +53,27 @@ class RobotPersistenceAdapter(
         agentId = robot.agentId
         safetyProfileId = robot.safetyProfileId
         isExternal = robot.isExternal
+        active = robot.active
         connectionStatus = robot.connectionStatus
         operationStatus = robot.operationStatus
         currentExecutionId = robot.currentExecutionId
         lastHeartbeatAt = robot.lastHeartbeatAt
-        capabilities.clear()
+        val incoming = robot.capabilities.values.associateBy { it.code }
+        capabilities.removeIf { it.code !in incoming }
+        capabilities.forEach { capability ->
+            capability.supportStatus = incoming.getValue(capability.code).status.name
+        }
+        val existingCodes = capabilities.map { it.code }.toSet()
         capabilities.addAll(
-            robot.capabilities.values.map { capability ->
-                RobotCapabilityEntity(
-                    robot = this,
-                    code = capability.code,
-                    supportStatus = capability.status.name,
-                )
-            },
+            incoming.values
+                .filter { it.code !in existingCodes }
+                .map { capability ->
+                    RobotCapabilityEntity(
+                        robot = this,
+                        code = capability.code,
+                        supportStatus = capability.status.name,
+                    )
+                },
         )
     }
 
@@ -78,6 +87,7 @@ class RobotPersistenceAdapter(
         agentId = agentId,
         safetyProfileId = safetyProfileId,
         isExternal = isExternal,
+        active = active,
         currentExecutionId = currentExecutionId,
         lastHeartbeatAt = lastHeartbeatAt,
         connectionStatus = connectionStatus,

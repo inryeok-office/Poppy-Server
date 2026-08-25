@@ -87,7 +87,7 @@ data class UpdateRobotCommand(
     val alias: String?,
     val firmwareVersion: String?,
     val sdkVersion: String?,
-    val capabilities: List<RobotCapability>,
+    val capabilities: List<RobotCapability>?,
     val safetyProfileId: UUID?,
     val operationStatus: RobotOperationStatus?,
 )

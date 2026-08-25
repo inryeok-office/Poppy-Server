@@ -17,6 +17,7 @@ class Robot private constructor(
     lastHeartbeatAtValue: Instant?,
     connectionStatusValue: RobotConnectionStatus,
     operationStatusValue: RobotOperationStatus,
+    activeValue: Boolean,
     initialCapabilities: Collection<RobotCapability>,
 ) {
 
@@ -44,7 +45,7 @@ class Robot private constructor(
     var operationStatus: RobotOperationStatus = operationStatusValue
         private set
 
-    var active: Boolean = true
+    var active: Boolean = activeValue
         private set
 
     var lastHeartbeatAt: Instant? = lastHeartbeatAtValue
@@ -90,7 +91,7 @@ class Robot private constructor(
         alias: String?,
         firmwareVersion: String?,
         sdkVersion: String?,
-        capabilities: Collection<RobotCapability>,
+        capabilities: Collection<RobotCapability>?,
         safetyProfileId: UUID?,
         operationStatus: RobotOperationStatus?,
     ) {
@@ -99,7 +100,7 @@ class Robot private constructor(
         sdkVersion?.let { version -> this.sdkVersion = requireNotBlank(version, "sdkVersion") }
         safetyProfileId?.let { this.safetyProfileId = it }
         operationStatus?.let { this.operationStatus = it }
-        replaceCapabilities(capabilities)
+        capabilities?.let { replaceCapabilities(it) }
     }
 
     fun replaceCapabilities(capabilities: Collection<RobotCapability>) {
@@ -148,6 +149,7 @@ class Robot private constructor(
             lastHeartbeatAtValue = null,
             connectionStatusValue = RobotConnectionStatus.OFFLINE,
             operationStatusValue = RobotOperationStatus.UNAVAILABLE,
+            activeValue = true,
             initialCapabilities = capabilities,
         )
 
@@ -165,6 +167,7 @@ class Robot private constructor(
             lastHeartbeatAt: Instant?,
             connectionStatus: RobotConnectionStatus,
             operationStatus: RobotOperationStatus,
+            active: Boolean,
             capabilities: Collection<RobotCapability>,
         ): Robot = Robot(
             id = id,
@@ -180,6 +183,7 @@ class Robot private constructor(
             lastHeartbeatAtValue = lastHeartbeatAt,
             connectionStatusValue = connectionStatus,
             operationStatusValue = operationStatus,
+            activeValue = active,
             initialCapabilities = capabilities,
         )
 

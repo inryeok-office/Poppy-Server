@@ -8,6 +8,7 @@ CREATE TABLE robots (
     agent_id UUID,
     safety_profile_id UUID,
     is_external BOOLEAN NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
     connection_status TEXT NOT NULL,
     operational_status TEXT NOT NULL,
     current_execution_id UUID,

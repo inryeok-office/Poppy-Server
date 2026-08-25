@@ -139,6 +139,49 @@ class RobotManagementIntegrationTest {
     }
 
     @Test
+    fun `PATCH에서 생략한 필드는 유지하고 빈 capability 배열은 전체 삭제한다`() {
+        val id = register(
+            alias = "부분 수정 원본-${UUID.randomUUID()}",
+            capabilities = "[{\"code\":\"MOVE\",\"status\":\"UNVERIFIED\"}]",
+        )["data"]["robotId"].asText()
+
+        mockMvc.perform(
+            patch("/api/v1/admin/robots/$id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"alias":"부분 수정 완료"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.alias").value("부분 수정 완료"))
+            .andExpect(jsonPath("$.data.firmwareVersion").value("1.0.0"))
+            .andExpect(jsonPath("$.data.capabilities[0].code").value("MOVE"))
+
+        mockMvc.perform(
+            patch("/api/v1/admin/robots/$id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"capabilities":[]}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.capabilities").isEmpty)
+    }
+
+    @Test
+    fun `기존 capability를 같은 code로 수정해도 유일성 제약을 위반하지 않는다`() {
+        val id = register(
+            alias = "capability 수정-${UUID.randomUUID()}",
+            capabilities = "[{\"code\":\"MOVE\",\"status\":\"UNVERIFIED\"}]",
+        )["data"]["robotId"].asText()
+
+        mockMvc.perform(
+            patch("/api/v1/admin/robots/$id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"capabilities":[{"code":"MOVE","status":"VERIFIED"}]}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.capabilities[0].code").value("MOVE"))
+            .andExpect(jsonPath("$.data.capabilities[0].status").value("VERIFIED"))
+    }
+
+    @Test
     fun `존재하지 않는 Robot과 빈 PATCH를 거부한다`() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/${UUID.randomUUID()}")
