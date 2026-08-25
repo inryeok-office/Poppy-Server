@@ -2,6 +2,17 @@
 
 develop 대상 PR에는 다음이 자동으로 적용된다(`.github/workflows/pr-metadata.yml`, `.github/scripts/pr-metadata.js`, `.github/scripts/pr-rules.js`). Metadata는 열려 있는 PR에서만 수행하며, merged/closed PR의 title/body 편집은 재적용 대상이 아니다.
 
+## 제목과 본문 작성 문체
+
+PR 제목은 Squash Merge 후 최종 커밋 subject로 사용할 수 있으므로 Commit convention과 같은 스타일을 기본으로 한다.
+
+- Conventional Commits 형식(`type(scope): subject`) 유지
+- subject는 변경 대상과 목적이 드러나는 간결한 명사형 또는 작업명 중심으로 작성
+- 기본적으로 `~한다`, `~했다`, `~합니다` 같은 문장형 종결 사용 금지
+- 본문의 변경 사항, 검증, 제외 범위는 짧은 불릿과 체크리스트 중심으로 작성
+- 배경과 설계 이유를 설명하는 문단은 자연스러운 서술형 유지
+- `Closes #N` 등 자동화에 사용하는 연결 문구는 그대로 보존
+
 ## Assignee
 
 PR 작성자를 Assignee로 지정한다. 이미 지정되어 있으면 다시 지정하지 않는다. Bot이 생성한 PR은 Bot을 Assignee로 지정하지 않는다.
