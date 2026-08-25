@@ -58,6 +58,7 @@ class RobotPersistenceAdapter(
         operationStatus = robot.operationStatus
         currentExecutionId = robot.currentExecutionId
         lastHeartbeatAt = robot.lastHeartbeatAt
+        batteryPercent = robot.batteryPercent
         val incoming = robot.capabilities.values.associateBy { it.code }
         capabilities.removeIf { it.code !in incoming }
         capabilities.forEach { capability ->
@@ -90,6 +91,7 @@ class RobotPersistenceAdapter(
         active = active,
         currentExecutionId = currentExecutionId,
         lastHeartbeatAt = lastHeartbeatAt,
+        batteryPercent = batteryPercent,
         connectionStatus = connectionStatus,
         operationStatus = operationStatus,
         capabilities = capabilities.map { capability ->

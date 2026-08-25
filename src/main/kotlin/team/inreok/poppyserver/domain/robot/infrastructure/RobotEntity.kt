@@ -51,6 +51,8 @@ class RobotEntity(
     var currentExecutionId: UUID? = null,
     @Column(name = "last_heartbeat_at")
     var lastHeartbeatAt: Instant? = null,
+    @Column(name = "battery_percent")
+    var batteryPercent: Int? = null,
     @OneToMany(mappedBy = "robot", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
     var capabilities: MutableList<RobotCapabilityEntity> = mutableListOf(),
 )

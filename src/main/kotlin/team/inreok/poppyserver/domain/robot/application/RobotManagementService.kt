@@ -69,6 +69,44 @@ class RobotManagementService(
         )
         return robotRepository.save(robot)
     }
+
+    @Transactional
+    fun bindAgent(id: UUID, agentId: UUID, binding: RobotAgentBinding): Robot {
+        val robot = robotRepository.findById(id)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+
+        if (robot.agentId != null && robot.agentId != agentId) {
+            throw ApplicationException(ErrorCode.ROBOT_ALREADY_REGISTERED)
+        }
+        if (robot.model != binding.model ||
+            robot.edition != binding.edition ||
+            (robot.firmwareVersion != null && robot.firmwareVersion != binding.firmwareVersion) ||
+            robot.capabilities.keys != binding.capabilityCodes
+        ) {
+            throw ApplicationException(ErrorCode.AGENT_COMPATIBILITY_INVALID)
+        }
+
+        robot.bindToAgent(agentId)
+        return robotRepository.save(robot)
+    }
+
+    @Transactional
+    fun recordHeartbeat(agentId: UUID, command: RobotHeartbeatCommand): Robot {
+        val robot = robotRepository.findById(command.robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (robot.agentId != agentId) {
+            throw ApplicationException(ErrorCode.AGENT_ROBOT_BINDING_MISMATCH)
+        }
+
+        robot.applyHeartbeat(
+            at = command.sentAt,
+            connectionStatus = command.connectionStatus,
+            operationStatus = command.operationStatus,
+            batteryPercent = command.batteryPercent,
+            currentExecutionId = command.currentExecutionId,
+        )
+        return robotRepository.save(robot)
+    }
 }
 
 data class RegisterRobotCommand(
@@ -90,4 +128,20 @@ data class UpdateRobotCommand(
     val capabilities: List<RobotCapability>?,
     val safetyProfileId: UUID?,
     val operationStatus: RobotOperationStatus?,
+)
+
+data class RobotAgentBinding(
+    val model: String,
+    val edition: String,
+    val firmwareVersion: String,
+    val capabilityCodes: Set<String>,
+)
+
+data class RobotHeartbeatCommand(
+    val robotId: UUID,
+    val sentAt: java.time.Instant,
+    val connectionStatus: RobotConnectionStatus,
+    val operationStatus: RobotOperationStatus,
+    val batteryPercent: Int?,
+    val currentExecutionId: UUID?,
 )
