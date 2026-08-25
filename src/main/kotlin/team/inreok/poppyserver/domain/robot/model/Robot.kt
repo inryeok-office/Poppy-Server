@@ -7,8 +7,18 @@ class Robot private constructor(
     val id: UUID,
     aliasValue: String,
     modelValue: String,
+    editionValue: String,
     firmwareVersion: String?,
     sdkVersion: String?,
+    val agentId: UUID?,
+    safetyProfileId: UUID?,
+    val isExternal: Boolean,
+    currentExecutionIdValue: UUID?,
+    lastHeartbeatAtValue: Instant?,
+    connectionStatusValue: RobotConnectionStatus,
+    operationStatusValue: RobotOperationStatus,
+    activeValue: Boolean,
+    initialCapabilities: Collection<RobotCapability>,
 ) {
 
     var alias: String = requireNotBlank(aliasValue, "alias")
@@ -17,28 +27,46 @@ class Robot private constructor(
     var model: String = requireNotBlank(modelValue, "model")
         private set
 
+    var edition: String = requireNotBlank(editionValue, "edition")
+        private set
+
     var firmwareVersion: String? = firmwareVersion
         private set
 
     var sdkVersion: String? = sdkVersion
         private set
 
-    var connectionStatus: RobotConnectionStatus = RobotConnectionStatus.OFFLINE
+    var safetyProfileId: UUID? = safetyProfileId
         private set
 
-    var operationStatus: RobotOperationStatus = RobotOperationStatus.UNAVAILABLE
+    var connectionStatus: RobotConnectionStatus = connectionStatusValue
         private set
 
-    var active: Boolean = true
+    var operationStatus: RobotOperationStatus = operationStatusValue
         private set
 
-    var lastHeartbeatAt: Instant? = null
+    var active: Boolean = activeValue
         private set
+
+    var lastHeartbeatAt: Instant? = lastHeartbeatAtValue
+        private set
+
+    var currentExecutionId: UUID? = currentExecutionIdValue
+        private set
+
+    val occupied: Boolean
+        get() = currentExecutionId != null
 
     private val mutableCapabilities: MutableMap<String, RobotCapability> = mutableMapOf()
 
     val capabilities: Map<String, RobotCapability>
         get() = mutableCapabilities.toMap()
+
+    init {
+        initialCapabilities.forEach { capability ->
+            reportCapability(capability.code, capability.status)
+        }
+    }
 
     fun recordHeartbeat(at: Instant) {
         check(active) { "비활성화된 Robot은 heartbeat를 기록할 수 없습니다" }
@@ -57,6 +85,29 @@ class Robot private constructor(
 
     fun markUnavailable() {
         operationStatus = RobotOperationStatus.UNAVAILABLE
+    }
+
+    fun update(
+        alias: String?,
+        firmwareVersion: String?,
+        sdkVersion: String?,
+        capabilities: Collection<RobotCapability>?,
+        safetyProfileId: UUID?,
+        operationStatus: RobotOperationStatus?,
+    ) {
+        alias?.let { aliasValue -> this.alias = requireNotBlank(aliasValue, "alias") }
+        firmwareVersion?.let { version -> this.firmwareVersion = requireNotBlank(version, "firmwareVersion") }
+        sdkVersion?.let { version -> this.sdkVersion = requireNotBlank(version, "sdkVersion") }
+        safetyProfileId?.let { this.safetyProfileId = it }
+        operationStatus?.let { this.operationStatus = it }
+        capabilities?.let { replaceCapabilities(it) }
+    }
+
+    fun replaceCapabilities(capabilities: Collection<RobotCapability>) {
+        mutableCapabilities.clear()
+        capabilities.forEach { capability ->
+            reportCapability(capability.code, capability.status)
+        }
     }
 
     fun activate() {
@@ -79,7 +130,62 @@ class Robot private constructor(
             model: String,
             firmwareVersion: String? = null,
             sdkVersion: String? = null,
-        ): Robot = Robot(UUID.randomUUID(), alias, model, firmwareVersion, sdkVersion)
+            edition: String = model,
+            agentId: UUID? = null,
+            safetyProfileId: UUID? = null,
+            isExternal: Boolean = false,
+            capabilities: Collection<RobotCapability> = emptyList(),
+        ): Robot = Robot(
+            id = UUID.randomUUID(),
+            aliasValue = alias,
+            modelValue = model,
+            editionValue = edition,
+            firmwareVersion = firmwareVersion,
+            sdkVersion = sdkVersion,
+            agentId = agentId,
+            safetyProfileId = safetyProfileId,
+            isExternal = isExternal,
+            currentExecutionIdValue = null,
+            lastHeartbeatAtValue = null,
+            connectionStatusValue = RobotConnectionStatus.OFFLINE,
+            operationStatusValue = RobotOperationStatus.UNAVAILABLE,
+            activeValue = true,
+            initialCapabilities = capabilities,
+        )
+
+        fun restore(
+            id: UUID,
+            alias: String,
+            model: String,
+            edition: String,
+            firmwareVersion: String?,
+            sdkVersion: String?,
+            agentId: UUID?,
+            safetyProfileId: UUID?,
+            isExternal: Boolean,
+            currentExecutionId: UUID?,
+            lastHeartbeatAt: Instant?,
+            connectionStatus: RobotConnectionStatus,
+            operationStatus: RobotOperationStatus,
+            active: Boolean,
+            capabilities: Collection<RobotCapability>,
+        ): Robot = Robot(
+            id = id,
+            aliasValue = alias,
+            modelValue = model,
+            editionValue = edition,
+            firmwareVersion = firmwareVersion,
+            sdkVersion = sdkVersion,
+            agentId = agentId,
+            safetyProfileId = safetyProfileId,
+            isExternal = isExternal,
+            currentExecutionIdValue = currentExecutionId,
+            lastHeartbeatAtValue = lastHeartbeatAt,
+            connectionStatusValue = connectionStatus,
+            operationStatusValue = operationStatus,
+            activeValue = active,
+            initialCapabilities = capabilities,
+        )
 
         private fun requireNotBlank(value: String, field: String): String {
             require(value.isNotBlank()) { "$field 는 비어 있을 수 없습니다" }

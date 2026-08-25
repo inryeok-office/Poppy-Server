@@ -2,6 +2,7 @@ package team.inreok.poppyserver.global.error
 
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import team.inreok.poppyserver.global.response.ApiErrorBody
@@ -26,6 +27,13 @@ class GlobalExceptionHandler {
         val errorCode = ErrorCode.INVALID_INPUT
         return ResponseEntity.status(errorCode.status)
             .body(ApiResponse.failure(ApiErrorBody(code = errorCode.code, message = errorCode.message, fieldErrors = fieldErrors)))
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleHttpMessageNotReadable(): ResponseEntity<ApiResponse<Nothing>> {
+        val errorCode = ErrorCode.INVALID_INPUT
+        return ResponseEntity.status(errorCode.status)
+            .body(ApiResponse.failure(ApiErrorBody(code = errorCode.code, message = errorCode.message)))
     }
 
     @ExceptionHandler(Exception::class)
