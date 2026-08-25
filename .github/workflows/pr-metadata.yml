@@ -16,12 +16,13 @@ permissions:
 
 jobs:
   pr-metadata:
+    if: ${{ github.event.pull_request.state == 'open' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout base branch (not PR head)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.ref }}
           persist-credentials: false
 
       - name: Run PR metadata automation

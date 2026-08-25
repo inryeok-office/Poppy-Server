@@ -1,6 +1,6 @@
 # PR 자동화 규칙
 
-develop 대상 PR에는 다음이 자동으로 적용된다(`.github/workflows/pr-metadata.yml`, `.github/scripts/pr-metadata.js`, `.github/scripts/pr-rules.js`).
+develop 대상 PR에는 다음이 자동으로 적용된다(`.github/workflows/pr-metadata.yml`, `.github/scripts/pr-metadata.js`, `.github/scripts/pr-rules.js`). Metadata는 열려 있는 PR에서만 수행하며, merged/closed PR의 title/body 편집은 재적용 대상이 아니다.
 
 ## Assignee
 
@@ -26,7 +26,7 @@ PR 작성자를 Assignee로 지정한다. 이미 지정되어 있으면 다시 �
 
 ## 보안 설계
 
-이 워크플로는 `pull_request_target`을 사용하지만 PR head는 checkout하지 않는다. `actions/checkout`에 `ref: ${{ github.event.pull_request.base.sha }}`를 명시해 신뢰된 base 브랜치 코드만 checkout하고, PR에서 제출된 코드나 스크립트는 실행하지 않는다. 실제 동작은 GitHub REST API 호출로만 이루어진다.
+이 워크플로는 `pull_request_target`을 사용하지만 PR head는 checkout하지 않는다. `actions/checkout`에 `ref: ${{ github.event.pull_request.base.ref }}`를 명시해 실행 시점의 신뢰된 base 브랜치 코드만 checkout하고, PR에서 제출된 코드나 스크립트는 실행하지 않는다. 실제 동작은 GitHub REST API 호출로만 이루어진다.
 
 ## 연결 Issue
 
