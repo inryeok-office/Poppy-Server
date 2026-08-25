@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.agent.presentation
 
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -8,16 +9,15 @@ import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import tools.jackson.databind.JsonNode
 import team.inreok.poppyserver.domain.agent.application.AgentManagementService
 import team.inreok.poppyserver.domain.agent.application.AgentRegistrationResult
 import team.inreok.poppyserver.domain.agent.application.HeartbeatCommand
@@ -27,10 +27,11 @@ import team.inreok.poppyserver.domain.agent.application.RegisterAgentRobotComman
 import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
+import team.inreok.poppyserver.global.error.ApplicationException
+import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.global.response.ApiResponse
 
 @RestController
-@ConditionalOnBean(AgentManagementService::class)
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 @RequestMapping("/api/v1/internal/agents")
 class AgentController(
@@ -38,10 +39,9 @@ class AgentController(
 ) {
     @PostMapping("/register")
     fun register(
-        @RequestHeader(name = "X-Agent-Token", required = false) token: String?,
         @Valid @RequestBody request: AgentRegistrationRequest,
     ): ResponseEntity<ApiResponse<AgentRegistrationResponse>> {
-        val result = agentManagementService.register(token, request.toCommand())
+        val result = agentManagementService.register(request.toCommand())
         return ResponseEntity.status(HttpStatus.CREATED).body(
             ApiResponse.success(result.toResponse()),
         )
@@ -49,11 +49,10 @@ class AgentController(
 
     @PostMapping("/{agentId}/heartbeat")
     fun heartbeat(
-        @RequestHeader(name = "X-Agent-Token", required = false) token: String?,
         @PathVariable agentId: UUID,
         @Valid @RequestBody request: AgentHeartbeatRequest,
     ): ApiResponse<AgentHeartbeatResponse> {
-        val acceptedAt = agentManagementService.heartbeat(token, agentId, request.toCommand())
+        val acceptedAt = agentManagementService.heartbeat(agentId, request.toCommand())
         return ApiResponse.success(
             AgentHeartbeatResponse(
                 agentId = agentId,
@@ -68,7 +67,7 @@ data class AgentRegistrationRequest(
     @field:NotBlank val agentVersion: String?,
     @field:NotBlank val sdkVersion: String?,
     @field:NotBlank val platform: String?,
-    @field:NotNull val robots: List<@Valid AgentRobotRegistrationRequest>?,
+    @field:NotNull @field:Valid val robots: List<AgentRobotRegistrationRequest>?,
 ) {
     fun toCommand(): RegisterAgentCommand = RegisterAgentCommand(
         agentName = requireNotNull(agentName),
@@ -97,7 +96,7 @@ data class AgentRobotRegistrationRequest(
 
 data class AgentHeartbeatRequest(
     @field:NotNull val sentAt: LocalDateTime?,
-    @field:NotNull val robots: List<@Valid AgentHeartbeatRobotRequest>?,
+    @field:NotNull @field:Valid val robots: List<AgentHeartbeatRobotRequest>?,
 ) {
     fun toCommand(): HeartbeatCommand = HeartbeatCommand(
         sentAt = requireNotNull(sentAt).toInstant(ZoneOffset.UTC),
@@ -110,14 +109,15 @@ data class AgentHeartbeatRobotRequest(
     @field:NotNull val connectionStatus: RobotConnectionStatus?,
     @field:NotNull val operationalStatus: RobotOperationStatus?,
     @field:Min(0) @field:Max(100) val batteryPercent: Int? = null,
-    val currentExecutionId: UUID? = null,
+    val currentExecutionId: JsonNode? = null,
 ) {
     fun toCommand(): HeartbeatRobotCommand = HeartbeatRobotCommand(
         robotId = requireNotNull(robotId),
         connectionStatus = requireNotNull(connectionStatus),
         operationStatus = requireNotNull(operationalStatus),
         batteryPercent = batteryPercent,
-        currentExecutionId = currentExecutionId,
+        currentExecutionId = currentExecutionId.toNullableUuid(),
+        currentExecutionIdProvided = currentExecutionId != null,
     )
 }
 
@@ -138,4 +138,14 @@ private fun AgentRegistrationResult.toResponse(): AgentRegistrationResponse = Ag
     acceptedRobotIds = acceptedRobotIds,
 )
 
-private fun java.time.Instant.toUtcLocalDateTime(): LocalDateTime = atZone(ZoneOffset.UTC).toLocalDateTime()
+private fun Instant.toUtcLocalDateTime(): LocalDateTime = atZone(ZoneOffset.UTC).toLocalDateTime()
+
+private fun JsonNode?.toNullableUuid(): UUID? {
+    if (this == null || isNull) return null
+    if (!isTextual) throw ApplicationException(ErrorCode.HEARTBEAT_PAYLOAD_INVALID)
+    return try {
+        UUID.fromString(asText())
+    } catch (_: IllegalArgumentException) {
+        throw ApplicationException(ErrorCode.HEARTBEAT_PAYLOAD_INVALID)
+    }
+}

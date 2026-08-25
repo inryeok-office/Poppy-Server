@@ -110,6 +110,15 @@ class Robot private constructor(
         this.agentId = agentId
     }
 
+    fun applyAgentBinding(firmwareVersion: String, capabilityCodes: Set<String>) {
+        if (this.firmwareVersion == null) {
+            this.firmwareVersion = requireNotBlank(firmwareVersion, "firmwareVersion")
+        }
+        capabilityCodes
+            .filterNot { it in capabilities }
+            .forEach { reportCapability(it) }
+    }
+
     fun markOffline() {
         connectionStatus = RobotConnectionStatus.OFFLINE
     }

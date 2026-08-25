@@ -30,6 +30,23 @@ class RobotPersistenceAdapter(
 
     override fun findById(id: UUID): Robot? = robotJpaRepository.findById(id).orElse(null)?.toDomain()
 
+    override fun findAllById(ids: Collection<UUID>): List<Robot> =
+        robotJpaRepository.findAllById(ids).map { it.toDomain() }
+
+    override fun saveAll(robots: Collection<Robot>): List<Robot> {
+        val existing = robotJpaRepository.findAllById(robots.map { it.id }).associateBy { it.id }
+        val entities = robots.map { robot ->
+            val entity = existing[robot.id] ?: RobotEntity(id = robot.id)
+            entity.updateFrom(robot)
+            if (robot.id !in existing) {
+                entityManager.persist(entity)
+            }
+            entity
+        }
+        entityManager.flush()
+        return entities.map { it.toDomain() }
+    }
+
     override fun findAll(
         operationStatus: RobotOperationStatus?,
         connectionStatus: RobotConnectionStatus?,

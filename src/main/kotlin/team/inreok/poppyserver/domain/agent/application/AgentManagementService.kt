@@ -1,12 +1,8 @@
 package team.inreok.poppyserver.domain.agent.application
 
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
 import java.util.UUID
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
@@ -15,21 +11,20 @@ import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.robot.application.RobotAgentBinding
 import team.inreok.poppyserver.domain.robot.application.RobotHeartbeatCommand
 import team.inreok.poppyserver.domain.robot.application.RobotManagementService
+import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
+import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 
 @Service
-@ConditionalOnBean(value = [AgentRepository::class, RobotManagementService::class])
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class AgentManagementService(
     private val agentRepository: AgentRepository,
     private val robotManagementService: RobotManagementService,
-    @Value("\${poppy.agent.token:}") private val configuredToken: String,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     @Transactional
-    fun register(token: String?, command: RegisterAgentCommand): AgentRegistrationResult {
-        validateToken(token)
+    fun register(command: RegisterAgentCommand): AgentRegistrationResult {
         validateRegistration(command)
         if (agentRepository.findByName(command.agentName) != null) {
             throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
@@ -64,50 +59,39 @@ class AgentManagementService(
     }
 
     @Transactional
-    fun heartbeat(token: String?, agentId: UUID, command: HeartbeatCommand): Instant {
-        validateToken(token)
+    fun heartbeat(agentId: UUID, command: HeartbeatCommand): Instant {
         validateHeartbeat(command)
         val agent = agentRepository.findById(agentId)
             ?: throw ApplicationException(ErrorCode.AGENT_NOT_FOUND)
 
-        agent.recordHeartbeat(command.sentAt)
+        val acceptedAt = Instant.now(clock)
+        agent.recordHeartbeat(acceptedAt)
         agentRepository.save(agent)
-        command.robots.forEach { robot ->
-            robotManagementService.recordHeartbeat(
-                agentId = agentId,
-                command = RobotHeartbeatCommand(
+        robotManagementService.recordHeartbeats(
+            agentId = agentId,
+            commands = command.robots.map { robot ->
+                RobotHeartbeatCommand(
                     robotId = robot.robotId,
-                    sentAt = command.sentAt,
+                    at = acceptedAt,
                     connectionStatus = robot.connectionStatus,
                     operationStatus = robot.operationStatus,
                     batteryPercent = robot.batteryPercent,
                     currentExecutionId = robot.currentExecutionId,
-                ),
-            )
-        }
-        return Instant.now(clock)
-    }
-
-    private fun validateToken(token: String?) {
-        val provided = token?.toByteArray(StandardCharsets.UTF_8) ?: byteArrayOf()
-        val expected = configuredToken.toByteArray(StandardCharsets.UTF_8)
-        if (expected.isEmpty() || !MessageDigest.isEqual(provided, expected)) {
-            throw ApplicationException(ErrorCode.AGENT_AUTH_INVALID)
-        }
+                    currentExecutionIdProvided = robot.currentExecutionIdProvided,
+                )
+            },
+        )
+        return acceptedAt
     }
 
     private fun validateRegistration(command: RegisterAgentCommand) {
-        if (command.robots.mapNotNull { it.robotId }.size != command.robots.size ||
-            command.robots.mapNotNull { it.robotId }.toSet().size != command.robots.size
-        ) {
+        if (command.robots.distinctBy { it.robotId }.size != command.robots.size) {
             throw ApplicationException(ErrorCode.AGENT_REGISTRATION_INVALID)
         }
     }
 
     private fun validateHeartbeat(command: HeartbeatCommand) {
-        if (command.robots.map { it.robotId }.toSet().size != command.robots.size ||
-            command.robots.any { it.batteryPercent != null && it.batteryPercent !in 0..100 }
-        ) {
+        if (command.robots.distinctBy { it.robotId }.size != command.robots.size) {
             throw ApplicationException(ErrorCode.HEARTBEAT_PAYLOAD_INVALID)
         }
     }
@@ -136,10 +120,11 @@ data class HeartbeatCommand(
 
 data class HeartbeatRobotCommand(
     val robotId: UUID,
-    val connectionStatus: team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus,
-    val operationStatus: team.inreok.poppyserver.domain.robot.model.RobotOperationStatus,
+    val connectionStatus: RobotConnectionStatus,
+    val operationStatus: RobotOperationStatus,
     val batteryPercent: Int?,
     val currentExecutionId: UUID?,
+    val currentExecutionIdProvided: Boolean,
 )
 
 data class AgentRegistrationResult(

@@ -10,5 +10,3 @@ CREATE TABLE agents (
 
 CREATE UNIQUE INDEX uq_agents_name
     ON agents (name);
-
-DROP INDEX uq_robots_agent_id;

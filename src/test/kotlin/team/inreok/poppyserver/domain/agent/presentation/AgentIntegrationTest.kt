@@ -12,10 +12,6 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 import team.inreok.poppyserver.domain.agent.application.AgentRepository
 import team.inreok.poppyserver.domain.robot.application.RegisterRobotCommand
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
@@ -25,15 +21,15 @@ import team.inreok.poppyserver.domain.robot.model.Robot
 import team.inreok.poppyserver.domain.robot.model.RobotCapability
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
+import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-@Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc
-class AgentIntegrationTest {
+class AgentIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var mockMvc: MockMvc
@@ -212,6 +208,16 @@ class AgentIntegrationTest {
             post("/api/v1/internal/agents/$agentId/heartbeat")
                 .header("X-Agent-Token", TEST_TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
+                .content(heartbeatJson(robot.id, "ONLINE", "READY", 75, null, includeCurrentExecutionId = false)),
+        )
+            .andExpect(status().isOk)
+
+        assertEquals(executionId, robotRepository.findById(robot.id)?.currentExecutionId)
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/$agentId/heartbeat")
+                .header("X-Agent-Token", TEST_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "OFFLINE", "UNAVAILABLE", null, null)),
         )
             .andExpect(status().isOk)
@@ -269,7 +275,7 @@ class AgentIntegrationTest {
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 101, null)),
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error.code").value("HEARTBEAT_PAYLOAD_INVALID"))
+            .andExpect(jsonPath("$.error.code").value("COMMON_400"))
     }
 
     private fun saveRobot(model: String, edition: String, firmwareVersion: String, capability: String): Robot =
@@ -340,6 +346,7 @@ class AgentIntegrationTest {
         operationStatus: String,
         batteryPercent: Int?,
         currentExecutionId: UUID?,
+        includeCurrentExecutionId: Boolean = true,
     ): String = """
         {
           "sentAt":"2026-08-25T10:20:30",
@@ -347,8 +354,8 @@ class AgentIntegrationTest {
             "robotId":"$robotId",
             "connectionStatus":"$connectionStatus",
             "operationalStatus":"$operationStatus",
-            "batteryPercent":${batteryPercent ?: "null"},
-            "currentExecutionId":${currentExecutionId?.let { "\"$it\"" } ?: "null"}
+            "batteryPercent":${batteryPercent ?: "null"}${if (includeCurrentExecutionId) "," else ""}
+            ${if (includeCurrentExecutionId) "\"currentExecutionId\":${currentExecutionId?.let { "\"$it\"" } ?: "null"}" else ""}
           }]
         }
     """.trimIndent()
@@ -358,16 +365,9 @@ class AgentIntegrationTest {
     companion object {
         private const val TEST_TOKEN = "test-agent-token"
 
-        @Container
-        @JvmStatic
-        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
-
         @DynamicPropertySource
         @JvmStatic
         fun registerProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasource.username", postgres::getUsername)
-            registry.add("spring.datasource.password", postgres::getPassword)
             registry.add("poppy.agent.token") { TEST_TOKEN }
         }
     }
