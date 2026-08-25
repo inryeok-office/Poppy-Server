@@ -81,7 +81,7 @@ Fork PR 등 Secret이 제공되지 않는 컨텍스트에서는 알림을 생략
 
 ## PR 메타데이터 자동화
 
-자세한 규칙은 [`docs/pull-request-convention.md`](pull-request-convention.md)를 참고한다. `.github/workflows/pr-metadata.yml`이 `pull_request_target`(`opened`/`reopened`/`synchronize`/`edited`/`ready_for_review`)에서 PR 작성자 Assignee 지정, Reviewer 자동 요청, 브랜치·경로 기반 라벨 지정을 수행한다.
+자세한 규칙은 [`docs/pull-request-convention.md`](pull-request-convention.md)를 참고한다. `.github/workflows/pr-metadata.yml`이 `pull_request_target`(`opened`/`reopened`/`synchronize`/`edited`/`ready_for_review`)에서 열려 있는 PR만 대상으로 PR 작성자 Assignee 지정, Reviewer 자동 요청, 브랜치·경로 기반 라벨 지정을 수행한다. 이미 merged/closed된 PR의 title/body 편집은 Metadata 재적용 대상이 아니다.
 
 ## 이슈 자동 종료
 
@@ -89,7 +89,7 @@ Fork PR 등 Secret이 제공되지 않는 컨텍스트에서는 알림을 생략
 
 ## pull_request_target 보안 설계
 
-`pr-metadata.yml`, `close-linked-issues.yml`은 `pull_request_target`을 사용하지만 `actions/checkout`에 `ref: ${{ github.event.pull_request.base.sha }}`를 명시해 PR head가 아닌 신뢰된 base 브랜치 코드만 checkout한다. PR에서 제출된 코드나 스크립트는 실행하지 않으며, 모든 동작은 GitHub REST API 호출로만 이루어진다. 이 방식을 선택한 이유는 로직을 워크플로 YAML에 전부 인라인으로 넣는 대신 `.github/scripts/*.js`로 분리해 `node --test`로 검증 가능하게 하면서도, base 브랜치는 이미 리뷰·병합을 거친 신뢰된 코드이므로 PR head를 checkout하는 것과 동일한 위험이 없기 때문이다.
+`pr-metadata.yml`, `close-linked-issues.yml`은 `pull_request_target`을 사용하지만 PR head가 아닌 신뢰된 base 브랜치 코드만 checkout한다. `pr-metadata.yml`은 실행 시점의 base 브랜치 ref를 사용하고, `close-linked-issues.yml`은 해당 이벤트의 base SHA를 사용한다. PR head checkout이나 PR에서 제출된 스크립트 실행은 하지 않으며, 모든 동작은 GitHub REST API 호출로만 이루어진다. 이 방식을 선택한 이유는 로직을 워크플로 YAML에 전부 인라인으로 넣는 대신 `.github/scripts/*.js`로 분리해 `node --test`로 검증 가능하게 하면서도, base 브랜치는 이미 리뷰·병합을 거친 신뢰된 코드이므로 PR head를 checkout하는 것과 동일한 위험이 없기 때문이다.
 
 ## 소급 적용
 
