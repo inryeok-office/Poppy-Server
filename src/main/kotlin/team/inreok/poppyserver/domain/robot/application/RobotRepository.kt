@@ -10,6 +10,10 @@ interface RobotRepository {
 
     fun findById(id: UUID): Robot?
 
+    fun findAllById(ids: Collection<UUID>): List<Robot>
+
+    fun saveAll(robots: Collection<Robot>): List<Robot>
+
     fun findAll(
         operationStatus: RobotOperationStatus?,
         connectionStatus: RobotConnectionStatus?,

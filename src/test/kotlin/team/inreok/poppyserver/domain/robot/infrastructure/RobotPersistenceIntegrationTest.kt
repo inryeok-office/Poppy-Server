@@ -4,35 +4,27 @@ import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.dao.DataIntegrityViolationException
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import org.springframework.transaction.annotation.Transactional
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
 import team.inreok.poppyserver.domain.robot.model.Robot
+import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
-@Testcontainers
 @SpringBootTest
-class RobotPersistenceIntegrationTest {
+class RobotPersistenceIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var robotRepository: RobotRepository
 
     @Test
     @Transactional
-    fun `Agent 중복은 flush 시점에 persistence 예외로 검증된다`() {
+    fun `하나의 Agent에 여러 Robot을 연결해 저장하고 복원한다`() {
         val agentId = UUID.randomUUID()
-        robotRepository.save(Robot.register(alias = "첫 번째", model = "GO2", agentId = agentId))
+        val first = robotRepository.save(Robot.register(alias = "첫 번째", model = "GO2", agentId = agentId))
+        val second = robotRepository.save(Robot.register(alias = "두 번째", model = "GO2", agentId = agentId))
 
-        assertFailsWith<DataIntegrityViolationException> {
-            robotRepository.save(Robot.register(alias = "두 번째", model = "GO2", agentId = agentId))
-        }
+        assertEquals(agentId, robotRepository.findById(first.id)?.agentId)
+        assertEquals(agentId, robotRepository.findById(second.id)?.agentId)
     }
 
     @Test
@@ -46,17 +38,4 @@ class RobotPersistenceIntegrationTest {
         assertEquals(false, robotRepository.findById(robot.id)?.active)
     }
 
-    companion object {
-        @Container
-        @JvmStatic
-        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
-
-        @DynamicPropertySource
-        @JvmStatic
-        fun registerProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasource.username", postgres::getUsername)
-            registry.add("spring.datasource.password", postgres::getPassword)
-        }
-    }
 }

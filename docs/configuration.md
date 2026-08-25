@@ -18,6 +18,7 @@
 | `DB_NAME` | 데이터베이스 이름 | `poppy` |
 | `DB_USERNAME` | 데이터베이스 사용자 | `poppy` |
 | `DB_PASSWORD` | 데이터베이스 비밀번호 | `poppy` |
+| `POPPY_AGENT_TOKEN` | 내부 Robot Agent API 인증 토큰 | 설정 필요 |
 
 ## 로컬 데이터베이스 실행
 

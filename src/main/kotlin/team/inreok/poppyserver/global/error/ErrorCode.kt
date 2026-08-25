@@ -16,4 +16,11 @@ enum class ErrorCode(
     ROBOT_NOT_FOUND(HttpStatus.NOT_FOUND, "ROBOT_NOT_FOUND", "The Robot was not found"),
     ROBOT_UPDATE_CONFLICT(HttpStatus.CONFLICT, "ROBOT_UPDATE_CONFLICT", "The Robot cannot be changed while it is executing"),
     ROBOT_CAPABILITY_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "ROBOT_CAPABILITY_INVALID", "The Robot capability is invalid"),
+    AGENT_AUTH_INVALID(HttpStatus.UNAUTHORIZED, "AGENT_AUTH_INVALID", "The Agent authentication is invalid"),
+    AGENT_REGISTRATION_INVALID(HttpStatus.BAD_REQUEST, "AGENT_REGISTRATION_INVALID", "The Agent registration data is invalid"),
+    AGENT_ALREADY_REGISTERED(HttpStatus.CONFLICT, "AGENT_ALREADY_REGISTERED", "The Agent is already registered"),
+    AGENT_COMPATIBILITY_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "AGENT_COMPATIBILITY_INVALID", "The Agent and Robot are incompatible"),
+    AGENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AGENT_NOT_FOUND", "The Agent was not found"),
+    AGENT_ROBOT_BINDING_MISMATCH(HttpStatus.CONFLICT, "AGENT_ROBOT_BINDING_MISMATCH", "The Agent and Robot binding does not match"),
+    HEARTBEAT_PAYLOAD_INVALID(HttpStatus.BAD_REQUEST, "HEARTBEAT_PAYLOAD_INVALID", "The heartbeat payload is invalid"),
 }

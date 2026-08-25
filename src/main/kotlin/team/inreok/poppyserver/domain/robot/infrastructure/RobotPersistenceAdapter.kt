@@ -30,6 +30,23 @@ class RobotPersistenceAdapter(
 
     override fun findById(id: UUID): Robot? = robotJpaRepository.findById(id).orElse(null)?.toDomain()
 
+    override fun findAllById(ids: Collection<UUID>): List<Robot> =
+        robotJpaRepository.findAllById(ids).map { it.toDomain() }
+
+    override fun saveAll(robots: Collection<Robot>): List<Robot> {
+        val existing = robotJpaRepository.findAllById(robots.map { it.id }).associateBy { it.id }
+        val entities = robots.map { robot ->
+            val entity = existing[robot.id] ?: RobotEntity(id = robot.id)
+            entity.updateFrom(robot)
+            if (robot.id !in existing) {
+                entityManager.persist(entity)
+            }
+            entity
+        }
+        entityManager.flush()
+        return entities.map { it.toDomain() }
+    }
+
     override fun findAll(
         operationStatus: RobotOperationStatus?,
         connectionStatus: RobotConnectionStatus?,
@@ -58,6 +75,7 @@ class RobotPersistenceAdapter(
         operationStatus = robot.operationStatus
         currentExecutionId = robot.currentExecutionId
         lastHeartbeatAt = robot.lastHeartbeatAt
+        batteryPercent = robot.batteryPercent
         val incoming = robot.capabilities.values.associateBy { it.code }
         capabilities.removeIf { it.code !in incoming }
         capabilities.forEach { capability ->
@@ -90,6 +108,7 @@ class RobotPersistenceAdapter(
         active = active,
         currentExecutionId = currentExecutionId,
         lastHeartbeatAt = lastHeartbeatAt,
+        batteryPercent = batteryPercent,
         connectionStatus = connectionStatus,
         operationStatus = operationStatus,
         capabilities = capabilities.map { capability ->

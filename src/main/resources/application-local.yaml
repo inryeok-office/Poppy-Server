@@ -9,3 +9,6 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+poppy:
+  agent:
+    token: ${POPPY_AGENT_TOKEN:}

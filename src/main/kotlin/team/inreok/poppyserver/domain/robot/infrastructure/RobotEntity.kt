@@ -13,6 +13,7 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
+import jakarta.persistence.Version
 import java.time.Instant
 import java.util.UUID
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
@@ -23,6 +24,8 @@ import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 class RobotEntity(
     @Id
     var id: UUID? = null,
+    @Version
+    var version: Long? = null,
     @Column(nullable = false, columnDefinition = "text")
     var alias: String = "",
     @Column(nullable = false, columnDefinition = "text")
@@ -51,6 +54,8 @@ class RobotEntity(
     var currentExecutionId: UUID? = null,
     @Column(name = "last_heartbeat_at")
     var lastHeartbeatAt: Instant? = null,
+    @Column(name = "battery_percent")
+    var batteryPercent: Int? = null,
     @OneToMany(mappedBy = "robot", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
     var capabilities: MutableList<RobotCapabilityEntity> = mutableListOf(),
 )

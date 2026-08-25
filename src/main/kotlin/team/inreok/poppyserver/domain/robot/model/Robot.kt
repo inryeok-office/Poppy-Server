@@ -10,11 +10,12 @@ class Robot private constructor(
     editionValue: String,
     firmwareVersion: String?,
     sdkVersion: String?,
-    val agentId: UUID?,
+    agentIdValue: UUID?,
     safetyProfileId: UUID?,
     val isExternal: Boolean,
     currentExecutionIdValue: UUID?,
     lastHeartbeatAtValue: Instant?,
+    batteryPercentValue: Int?,
     connectionStatusValue: RobotConnectionStatus,
     operationStatusValue: RobotOperationStatus,
     activeValue: Boolean,
@@ -36,6 +37,9 @@ class Robot private constructor(
     var sdkVersion: String? = sdkVersion
         private set
 
+    var agentId: UUID? = agentIdValue
+        private set
+
     var safetyProfileId: UUID? = safetyProfileId
         private set
 
@@ -49,6 +53,9 @@ class Robot private constructor(
         private set
 
     var lastHeartbeatAt: Instant? = lastHeartbeatAtValue
+        private set
+
+    var batteryPercent: Int? = batteryPercentValue
         private set
 
     var currentExecutionId: UUID? = currentExecutionIdValue
@@ -69,9 +76,47 @@ class Robot private constructor(
     }
 
     fun recordHeartbeat(at: Instant) {
+        applyHeartbeat(
+            at = at,
+            connectionStatus = RobotConnectionStatus.ONLINE,
+            operationStatus = operationStatus,
+            batteryPercent = batteryPercent,
+            currentExecutionId = currentExecutionId,
+        )
+    }
+
+    fun applyHeartbeat(
+        at: Instant,
+        connectionStatus: RobotConnectionStatus,
+        operationStatus: RobotOperationStatus,
+        batteryPercent: Int?,
+        currentExecutionId: UUID?,
+    ) {
         check(active) { "비활성화된 Robot은 heartbeat를 기록할 수 없습니다" }
+        require(batteryPercent == null || batteryPercent in 0..100) {
+            "batteryPercent는 0에서 100 사이여야 합니다"
+        }
         lastHeartbeatAt = at
-        connectionStatus = RobotConnectionStatus.ONLINE
+        this.connectionStatus = connectionStatus
+        this.operationStatus = operationStatus
+        this.batteryPercent = batteryPercent
+        this.currentExecutionId = currentExecutionId
+    }
+
+    fun bindToAgent(agentId: UUID) {
+        check(this.agentId == null || this.agentId == agentId) {
+            "이미 다른 Agent에 연결된 Robot입니다"
+        }
+        this.agentId = agentId
+    }
+
+    fun applyAgentBinding(firmwareVersion: String, capabilityCodes: Set<String>) {
+        if (this.firmwareVersion == null) {
+            this.firmwareVersion = requireNotBlank(firmwareVersion, "firmwareVersion")
+        }
+        capabilityCodes
+            .filterNot { it in capabilities }
+            .forEach { reportCapability(it) }
     }
 
     fun markOffline() {
@@ -142,11 +187,12 @@ class Robot private constructor(
             editionValue = edition,
             firmwareVersion = firmwareVersion,
             sdkVersion = sdkVersion,
-            agentId = agentId,
+            agentIdValue = agentId,
             safetyProfileId = safetyProfileId,
             isExternal = isExternal,
             currentExecutionIdValue = null,
             lastHeartbeatAtValue = null,
+            batteryPercentValue = null,
             connectionStatusValue = RobotConnectionStatus.OFFLINE,
             operationStatusValue = RobotOperationStatus.UNAVAILABLE,
             activeValue = true,
@@ -165,6 +211,7 @@ class Robot private constructor(
             isExternal: Boolean,
             currentExecutionId: UUID?,
             lastHeartbeatAt: Instant?,
+            batteryPercent: Int?,
             connectionStatus: RobotConnectionStatus,
             operationStatus: RobotOperationStatus,
             active: Boolean,
@@ -176,11 +223,12 @@ class Robot private constructor(
             editionValue = edition,
             firmwareVersion = firmwareVersion,
             sdkVersion = sdkVersion,
-            agentId = agentId,
+            agentIdValue = agentId,
             safetyProfileId = safetyProfileId,
             isExternal = isExternal,
             currentExecutionIdValue = currentExecutionId,
             lastHeartbeatAtValue = lastHeartbeatAt,
+            batteryPercentValue = batteryPercent,
             connectionStatusValue = connectionStatus,
             operationStatusValue = operationStatus,
             activeValue = active,

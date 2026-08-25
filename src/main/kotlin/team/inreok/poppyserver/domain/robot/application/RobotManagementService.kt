@@ -1,7 +1,9 @@
 package team.inreok.poppyserver.domain.robot.application
 
+import java.time.Instant
 import java.util.UUID
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.orm.ObjectOptimisticLockingFailureException
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -69,6 +71,61 @@ class RobotManagementService(
         )
         return robotRepository.save(robot)
     }
+
+    @Transactional
+    fun bindAgent(id: UUID, agentId: UUID, binding: RobotAgentBinding): Robot {
+        val robot = robotRepository.findById(id)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+
+        if (robot.agentId != null && robot.agentId != agentId) {
+            throw ApplicationException(ErrorCode.ROBOT_ALREADY_REGISTERED)
+        }
+        if (robot.model != binding.model ||
+            robot.edition != binding.edition ||
+            (robot.firmwareVersion != null && robot.firmwareVersion != binding.firmwareVersion) ||
+            !binding.capabilityCodes.containsAll(robot.capabilities.keys)
+        ) {
+            throw ApplicationException(ErrorCode.AGENT_COMPATIBILITY_INVALID)
+        }
+
+        robot.bindToAgent(agentId)
+        robot.applyAgentBinding(binding.firmwareVersion, binding.capabilityCodes)
+        return try {
+            robotRepository.save(robot)
+        } catch (_: ObjectOptimisticLockingFailureException) {
+            throw ApplicationException(ErrorCode.ROBOT_ALREADY_REGISTERED)
+        }
+    }
+
+    @Transactional
+    fun recordHeartbeats(agentId: UUID, commands: Collection<RobotHeartbeatCommand>): List<Robot> {
+        val robots = robotRepository.findAllById(commands.map { it.robotId }).associateBy { it.id }
+        if (robots.size != commands.size) {
+            throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        }
+        commands.forEach { command ->
+            val robot = robots.getValue(command.robotId)
+            if (robot.agentId != agentId) {
+                throw ApplicationException(ErrorCode.AGENT_ROBOT_BINDING_MISMATCH)
+            }
+            robot.applyHeartbeat(
+                at = command.at,
+                connectionStatus = command.connectionStatus,
+                operationStatus = command.operationStatus,
+                batteryPercent = command.batteryPercent,
+                currentExecutionId = if (command.currentExecutionIdProvided) {
+                    command.currentExecutionId
+                } else {
+                    robot.currentExecutionId
+                },
+            )
+        }
+        return try {
+            robotRepository.saveAll(robots.values)
+        } catch (_: ObjectOptimisticLockingFailureException) {
+            throw ApplicationException(ErrorCode.AGENT_ROBOT_BINDING_MISMATCH)
+        }
+    }
 }
 
 data class RegisterRobotCommand(
@@ -90,4 +147,21 @@ data class UpdateRobotCommand(
     val capabilities: List<RobotCapability>?,
     val safetyProfileId: UUID?,
     val operationStatus: RobotOperationStatus?,
+)
+
+data class RobotAgentBinding(
+    val model: String,
+    val edition: String,
+    val firmwareVersion: String,
+    val capabilityCodes: Set<String>,
+)
+
+data class RobotHeartbeatCommand(
+    val robotId: UUID,
+    val at: Instant,
+    val connectionStatus: RobotConnectionStatus,
+    val operationStatus: RobotOperationStatus,
+    val batteryPercent: Int?,
+    val currentExecutionId: UUID?,
+    val currentExecutionIdProvided: Boolean,
 )
