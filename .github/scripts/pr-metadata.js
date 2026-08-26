@@ -147,14 +147,29 @@ async function applyPrMetadata({ client, pr, summary, requestReviewers = true })
   await applyLabels({ client, pr, summary });
 }
 
+function shouldRunPrMetadata(eventPayload) {
+  return eventPayload?.pull_request?.state === "open";
+}
+
 async function run({ token, repository, eventPayload }) {
   const pr = eventPayload.pull_request;
   if (!pr) {
     throw new Error("이벤트 페이로드에 pull_request 정보가 없습니다.");
   }
 
-  const client = createGitHubClient({ token, repository });
   const summary = [`## PR 메타데이터 자동화 결과 (#${pr.number})`, ""];
+
+  if (!shouldRunPrMetadata(eventPayload)) {
+    summary.push("- Metadata: closed/merged PR이라 실행하지 않음");
+    const summaryText = summary.join("\n") + "\n";
+    console.log(summaryText);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summaryText);
+    }
+    return;
+  }
+
+  const client = createGitHubClient({ token, repository });
 
   await applyPrMetadata({ client, pr, summary });
 
@@ -178,4 +193,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, applyPrMetadata, applyAssignee, applyReviewers, applyLabels, fetchChangedFilePaths };
+module.exports = {
+  run,
+  shouldRunPrMetadata,
+  applyPrMetadata,
+  applyAssignee,
+  applyReviewers,
+  applyLabels,
+  fetchChangedFilePaths,
+};
