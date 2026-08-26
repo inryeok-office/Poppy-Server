@@ -1,6 +1,7 @@
 package team.inreok.poppyserver.domain.robot.model
 
 import java.time.Instant
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -76,6 +77,43 @@ class RobotTest {
 
         robot.markUnavailable()
         assertEquals(RobotOperationStatus.UNAVAILABLE, robot.operationStatus)
+    }
+
+    @Test
+    fun `온라인 준비 상태의 미점유 Robot에 Execution을 배정한다`() {
+        val robot = Robot.register(alias = "행사장-1호기", model = "GO2 EDU")
+        val executionId = UUID.randomUUID()
+        robot.applyHeartbeat(
+            at = Instant.now(),
+            connectionStatus = RobotConnectionStatus.ONLINE,
+            operationStatus = RobotOperationStatus.READY,
+            batteryPercent = null,
+            currentExecutionId = null,
+        )
+
+        robot.assignExecution(executionId)
+
+        assertEquals(executionId, robot.currentExecutionId)
+        assertEquals(true, robot.occupied)
+    }
+
+    @Test
+    fun `이미 점유된 Robot에는 Execution을 재배정할 수 없다`() {
+        val robot = Robot.register(alias = "행사장-1호기", model = "GO2 EDU")
+        val firstExecutionId = UUID.randomUUID()
+        robot.applyHeartbeat(
+            at = Instant.now(),
+            connectionStatus = RobotConnectionStatus.ONLINE,
+            operationStatus = RobotOperationStatus.READY,
+            batteryPercent = null,
+            currentExecutionId = null,
+        )
+        robot.assignExecution(firstExecutionId)
+
+        assertFailsWith<IllegalStateException> {
+            robot.assignExecution(UUID.randomUUID())
+        }
+        assertEquals(firstExecutionId, robot.currentExecutionId)
     }
 
     @Test

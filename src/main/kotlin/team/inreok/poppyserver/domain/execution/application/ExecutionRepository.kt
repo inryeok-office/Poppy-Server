@@ -7,4 +7,6 @@ interface ExecutionRepository {
     fun save(execution: Execution): Execution
 
     fun findById(id: UUID): Execution?
+
+    fun findByIdForAllocation(id: UUID): Execution?
 }

@@ -10,6 +10,8 @@ interface RobotRepository {
 
     fun findById(id: UUID): Robot?
 
+    fun findAvailableForAllocation(): Robot?
+
     fun findAllById(ids: Collection<UUID>): List<Robot>
 
     fun saveAll(robots: Collection<Robot>): List<Robot>
