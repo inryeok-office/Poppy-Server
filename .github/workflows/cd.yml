@@ -1,0 +1,75 @@
+name: CD
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Deploy to server
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          command_timeout: 10m
+          script: |
+            set -e
+
+            cd ~/Poppy-Server
+
+            echo "=== Syncing with origin/develop ==="
+            git fetch origin
+            git reset --hard origin/develop
+
+            echo "=== Latest commit ==="
+            git log -1 --oneline
+
+            echo "=== Checking .env file ==="
+            if [ ! -f .env ]; then
+              echo "ERROR: .env file not found. Aborting deployment."
+              exit 1
+            fi
+
+            echo "=== Disk space check ==="
+            df -h / | tail -1
+
+            echo "=== Cleaning up unused images ==="
+            sudo docker image prune -f
+
+            echo "=== Building and deploying ==="
+            sudo docker compose up -d --build
+
+            echo "=== Health check (up to 60s) ==="
+            for i in $(seq 1 12); do
+              if curl -fs http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+                echo "Health check passed"
+                exit 0
+              fi
+              echo "Waiting for health check... ($i/12)"
+              sleep 5
+            done
+
+            echo "ERROR: Health check failed, dumping recent logs"
+            sudo docker logs poppy-app --tail 50
+            exit 1
+
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"✅ Poppy-Server develop deployment succeeded (commit: ${{ github.sha }})\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"❌ Poppy-Server develop deployment failed (commit: ${{ github.sha }}) — check Actions logs\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
