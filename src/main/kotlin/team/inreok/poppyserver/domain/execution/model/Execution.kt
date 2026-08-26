@@ -62,5 +62,10 @@ class Execution private constructor(
             id = UUID.randomUUID(),
             statusValue = ExecutionStatus.QUEUED,
         )
+
+        fun restore(id: UUID, status: ExecutionStatus): Execution = Execution(
+            id = id,
+            statusValue = status,
+        )
     }
 }

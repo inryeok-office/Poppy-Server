@@ -1,5 +1,8 @@
 package team.inreok.poppyserver.domain.execution.model
 
+import java.util.UUID
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -88,5 +91,18 @@ class ExecutionTest {
         assertFailsWith<IllegalStateException> { completed.start() }
         assertFailsWith<IllegalStateException> { failed.assign() }
         assertFailsWith<IllegalStateException> { cancelled.cancel() }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ExecutionStatus::class, names = ["COMPLETED", "FAILED", "CANCELLED"])
+    fun `terminal 상태로 복원된 경우 추가 전이를 거부한다`(status: ExecutionStatus) {
+        val execution = Execution.restore(UUID.randomUUID(), status)
+
+        when (status) {
+            ExecutionStatus.COMPLETED -> assertFailsWith<IllegalStateException> { execution.start() }
+            ExecutionStatus.FAILED -> assertFailsWith<IllegalStateException> { execution.assign() }
+            ExecutionStatus.CANCELLED -> assertFailsWith<IllegalStateException> { execution.start() }
+            else -> error("terminal status required")
+        }
     }
 }
