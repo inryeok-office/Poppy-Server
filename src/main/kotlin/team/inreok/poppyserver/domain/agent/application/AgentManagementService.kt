@@ -26,21 +26,26 @@ class AgentManagementService(
     @Transactional
     fun register(command: RegisterAgentCommand): AgentRegistrationResult {
         validateRegistration(command)
-        if (agentRepository.findByName(command.agentName) != null) {
-            throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
-        }
-
-        val agent = Agent.register(
+        val existingAgent = agentRepository.findByName(command.agentName)
+        val agent = existingAgent ?: Agent.register(
             name = command.agentName,
             agentVersion = command.agentVersion,
             sdkVersion = command.sdkVersion,
             platform = command.platform,
             registeredAt = Instant.now(clock),
         )
-        try {
+        existingAgent?.refreshRegistrationMetadata(
+            agentVersion = command.agentVersion,
+            sdkVersion = command.sdkVersion,
+            platform = command.platform,
+        )
+        val persistedAgent = try {
             agentRepository.save(agent)
-        } catch (_: DataIntegrityViolationException) {
-            throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
+        } catch (exception: DataIntegrityViolationException) {
+            if (existingAgent == null) {
+                throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
+            }
+            throw exception
         }
 
         val acceptedRobotIds = command.robots.map { robot ->
@@ -55,7 +60,7 @@ class AgentManagementService(
                 ),
             ).id
         }
-        return AgentRegistrationResult(agent, acceptedRobotIds)
+        return AgentRegistrationResult(persistedAgent, acceptedRobotIds)
     }
 
     @Transactional
