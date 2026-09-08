@@ -4,11 +4,9 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.agent.model.Agent
-import team.inreok.poppyserver.domain.robot.application.RobotAgentBinding
 import team.inreok.poppyserver.domain.robot.application.RobotHeartbeatCommand
 import team.inreok.poppyserver.domain.robot.application.RobotManagementService
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
@@ -21,41 +19,20 @@ import team.inreok.poppyserver.global.error.ErrorCode
 class AgentManagementService(
     private val agentRepository: AgentRepository,
     private val robotManagementService: RobotManagementService,
+    private val agentRegistrationTransaction: AgentRegistrationTransaction,
     private val clock: Clock = Clock.systemUTC(),
 ) {
-    @Transactional
     fun register(command: RegisterAgentCommand): AgentRegistrationResult {
         validateRegistration(command)
-        if (agentRepository.findByName(command.agentName) != null) {
-            throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
+        return try {
+            agentRegistrationTransaction.register(command)
+        } catch (_: AgentRegistrationRaceException) {
+            try {
+                agentRegistrationTransaction.register(command)
+            } catch (_: AgentRegistrationRaceException) {
+                throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
+            }
         }
-
-        val agent = Agent.register(
-            name = command.agentName,
-            agentVersion = command.agentVersion,
-            sdkVersion = command.sdkVersion,
-            platform = command.platform,
-            registeredAt = Instant.now(clock),
-        )
-        try {
-            agentRepository.save(agent)
-        } catch (_: DataIntegrityViolationException) {
-            throw ApplicationException(ErrorCode.AGENT_ALREADY_REGISTERED)
-        }
-
-        val acceptedRobotIds = command.robots.map { robot ->
-            robotManagementService.bindAgent(
-                id = requireNotNull(robot.robotId),
-                agentId = agent.id,
-                binding = RobotAgentBinding(
-                    model = robot.model,
-                    edition = robot.edition,
-                    firmwareVersion = robot.firmwareVersion,
-                    capabilityCodes = robot.capabilityCodes,
-                ),
-            ).id
-        }
-        return AgentRegistrationResult(agent, acceptedRobotIds)
     }
 
     @Transactional

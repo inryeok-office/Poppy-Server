@@ -13,9 +13,12 @@ class Agent private constructor(
     lastHeartbeatAtValue: Instant?,
 ) {
     val name: String = requireNotBlank(nameValue, "agentName")
-    val agentVersion: String = requireNotBlank(agentVersionValue, "agentVersion")
-    val sdkVersion: String = requireNotBlank(sdkVersionValue, "sdkVersion")
-    val platform: String = requireNotBlank(platformValue, "platform")
+    var agentVersion: String = requireNotBlank(agentVersionValue, "agentVersion")
+        private set
+    var sdkVersion: String = requireNotBlank(sdkVersionValue, "sdkVersion")
+        private set
+    var platform: String = requireNotBlank(platformValue, "platform")
+        private set
     val registeredAt: Instant = registeredAtValue
 
     var lastHeartbeatAt: Instant? = lastHeartbeatAtValue
@@ -23,6 +26,16 @@ class Agent private constructor(
 
     fun recordHeartbeat(at: Instant) {
         lastHeartbeatAt = at
+    }
+
+    fun refreshRegistrationMetadata(
+        agentVersion: String,
+        sdkVersion: String,
+        platform: String,
+    ) {
+        this.agentVersion = requireNotBlank(agentVersion, "agentVersion")
+        this.sdkVersion = requireNotBlank(sdkVersion, "sdkVersion")
+        this.platform = requireNotBlank(platform, "platform")
     }
 
     companion object {

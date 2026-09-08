@@ -3,6 +3,8 @@ package team.inreok.poppyserver.domain.agent.presentation
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import jakarta.persistence.EntityManager
+import jakarta.persistence.PersistenceContext
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
@@ -45,6 +47,9 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var robotManagementService: RobotManagementService
+
+    @PersistenceContext
+    lateinit var entityManager: EntityManager
 
     @Test
     fun `Agent를 등록하고 여러 Robot binding과 응답을 저장한다`() {
@@ -100,25 +105,36 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
-    fun `동일 Agent 이름과 Robot binding 충돌을 거부한다`() {
+    fun `동일 Agent 재등록은 기존 Agent와 binding을 재사용한다`() {
         val agentName = "duplicate-${UUID.randomUUID()}"
-        registerAgent(agentName)
-
-        mockMvc.perform(
-            post("/api/v1/internal/agents/register")
-                .header("X-Agent-Token", TEST_TOKEN)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(registrationJson(agentName)),
-        )
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.error.code").value("AGENT_ALREADY_REGISTERED"))
-
         val robot = saveRobot("GO2", "EDU", "1.0.0", "MOVE")
+        val firstResponse = registerAgent(
+            agentName = agentName,
+            robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
+        )
+        val firstData = firstResponse.body["data"]
+        val agentId = UUID.fromString(firstData["agentId"].asText())
+        val registeredAt = agentRepository.findById(agentId)?.registeredAt
+
+        val secondResponse = registerAgent(
+            agentName = agentName,
+            robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
+        )
+
+        assertEquals(201, secondResponse.status)
+        assertEquals(agentId.toString(), secondResponse.body["data"]["agentId"].asText())
+        assertEquals(1, secondResponse.body["data"]["acceptedRobotIds"].size())
+        assertEquals(robot.id.toString(), secondResponse.body["data"]["acceptedRobotIds"][0].asText())
+        assertEquals(1L, entityManager.createQuery("select count(a) from AgentEntity a where a.name = :name", Long::class.java)
+            .setParameter("name", agentName)
+            .singleResult)
+        assertEquals(registeredAt, agentRepository.findById(agentId)?.registeredAt)
+        assertEquals(agentId, robotRepository.findById(robot.id)?.agentId)
+
         registerAgent(
             agentName = "first-${UUID.randomUUID()}",
             robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
         )
-
         mockMvc.perform(
             post("/api/v1/internal/agents/register")
                 .header("X-Agent-Token", TEST_TOKEN)
@@ -132,6 +148,48 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.error.code").value("ROBOT_ALREADY_REGISTERED"))
+    }
+
+    @Test
+    fun `Agent 재등록은 metadata와 heartbeat 시각을 갱신하고 보존한다`() {
+        val agentName = "metadata-${UUID.randomUUID()}"
+        val robot = saveRobot("GO2", "EDU", "1.0.0", "MOVE")
+        val firstResponse = registerAgent(
+            agentName = agentName,
+            robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
+            agentVersion = "1.0.0",
+            sdkVersion = "2.0.0",
+            platform = "linux-x86_64",
+        )
+        val agentId = UUID.fromString(firstResponse.body["data"]["agentId"].asText())
+        val registeredAt = agentRepository.findById(agentId)?.registeredAt
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/$agentId/heartbeat")
+                .header("X-Agent-Token", TEST_TOKEN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(heartbeatJson(robot.id, "ONLINE", "READY", 75, null)),
+        ).andExpect(status().isOk)
+        val heartbeatAt = agentRepository.findById(agentId)?.lastHeartbeatAt
+        assertNotNull(heartbeatAt)
+
+        val secondResponse = registerAgent(
+            agentName = agentName,
+            robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
+            agentVersion = "1.1.0",
+            sdkVersion = "2.1.0",
+            platform = "ubuntu-x86_64",
+        )
+
+        assertEquals(201, secondResponse.status)
+        val savedAgent = agentRepository.findById(agentId)
+        assertNotNull(savedAgent)
+        assertEquals(agentId, savedAgent.id)
+        assertEquals(registeredAt, savedAgent.registeredAt)
+        assertEquals(heartbeatAt, savedAgent.lastHeartbeatAt)
+        assertEquals("1.1.0", savedAgent.agentVersion)
+        assertEquals("2.1.0", savedAgent.sdkVersion)
+        assertEquals("ubuntu-x86_64", savedAgent.platform)
     }
 
     @Test
@@ -151,13 +209,18 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.error.code").value("ROBOT_NOT_FOUND"))
 
         val robot = saveRobot("GO2", "EDU", "1.0.0", "MOVE")
+        val agentName = "incompatible-${UUID.randomUUID()}"
+        registerAgent(
+            agentName = agentName,
+            robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
+        )
         mockMvc.perform(
             post("/api/v1/internal/agents/register")
                 .header("X-Agent-Token", TEST_TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     registrationJson(
-                        "incompatible-${UUID.randomUUID()}",
+                        agentName,
                         listOf(registrationRobotJson(robot, "1.0.0", "MOVE", model = "GO2-A")),
                     ),
                 ),
@@ -296,22 +359,31 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
     private fun registerAgent(
         agentName: String,
         robots: List<String> = emptyList(),
+        agentVersion: String = "1.0.0",
+        sdkVersion: String = "2.0.0",
+        platform: String = "linux-arm64",
     ): JsonResult {
         val result = mockMvc.perform(
             post("/api/v1/internal/agents/register")
                 .header("X-Agent-Token", TEST_TOKEN)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(registrationJson(agentName, robots)),
+                .content(registrationJson(agentName, robots, agentVersion, sdkVersion, platform)),
         ).andReturn()
         return JsonResult(result.response.status, objectMapper.readTree(result.response.contentAsString))
     }
 
-    private fun registrationJson(agentName: String, robots: List<String> = emptyList()): String = """
+    private fun registrationJson(
+        agentName: String,
+        robots: List<String> = emptyList(),
+        agentVersion: String = "1.0.0",
+        sdkVersion: String = "2.0.0",
+        platform: String = "linux-arm64",
+    ): String = """
         {
           "agentName":"$agentName",
-          "agentVersion":"1.0.0",
-          "sdkVersion":"2.0.0",
-          "platform":"linux-arm64",
+          "agentVersion":"$agentVersion",
+          "sdkVersion":"$sdkVersion",
+          "platform":"$platform",
           "robots":[${robots.joinToString(",")}]
         }
     """.trimIndent()
