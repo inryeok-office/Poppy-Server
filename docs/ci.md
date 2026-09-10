@@ -94,3 +94,10 @@ Fork PR 등 Secret이 제공되지 않는 컨텍스트에서는 알림을 생략
 ## 소급 적용
 
 `.github/workflows/retroactive.yml`(`workflow_dispatch`)이 `.github/scripts/retroactive.js`를 실행해, 이미 병합된 PR 목록에는 Assignee·라벨을 적용하고 연결 Issue를 종료하며(Reviewer는 요청하지 않음), 아직 열려 있는 PR 목록에는 Assignee·Reviewer·라벨을 모두 적용한다(종료·병합은 하지 않음). 입력값의 기본값은 초기세팅 당시 완료된 Issue #1·#3·#5·#7·#9·#11·#13, PR #2·#4·#6·#8·#10·#12·#14, 그리고 열려 있는 PR #15다. 동일 입력으로 재실행해도 중복 코멘트·중복 Reviewer 요청·중복 Assignee가 발생하지 않는다.
+## CD Discord notifications
+
+The CD workflow runs on pushes to develop and sends Embed notifications for deployment start, application replacement start, success, and failure. Failure notifications include the detected stage and a safe summary reason.
+
+The workflow keeps the existing docker compose up -d --build replacement strategy and does not add docker compose down. PostgreSQL and its volume are not intentionally stopped or deleted.
+
+Deployment success is reported only after http://localhost:8080/actuator/health returns status UP within 60 seconds. Detailed diagnostics remain in the Actions run; raw logs and secrets are not sent to Discord.
