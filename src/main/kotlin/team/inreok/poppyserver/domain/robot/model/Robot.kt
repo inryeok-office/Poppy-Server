@@ -64,6 +64,14 @@ class Robot private constructor(
     val occupied: Boolean
         get() = currentExecutionId != null
 
+    fun assignExecution(executionId: UUID) {
+        check(active) { "비활성화된 Robot은 배정할 수 없습니다" }
+        check(connectionStatus == RobotConnectionStatus.ONLINE) { "온라인 상태가 아닌 Robot은 배정할 수 없습니다" }
+        check(operationStatus == RobotOperationStatus.READY) { "준비 상태가 아닌 Robot은 배정할 수 없습니다" }
+        check(!occupied) { "이미 Execution이 배정된 Robot입니다" }
+        currentExecutionId = executionId
+    }
+
     private val mutableCapabilities: MutableMap<String, RobotCapability> = mutableMapOf()
 
     val capabilities: Map<String, RobotCapability>
