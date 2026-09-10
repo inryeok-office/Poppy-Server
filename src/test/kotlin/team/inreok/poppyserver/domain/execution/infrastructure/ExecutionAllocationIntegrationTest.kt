@@ -5,6 +5,7 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -39,6 +40,18 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
+
+    @BeforeEach
+    fun deactivateExistingRobots() {
+        inTransaction {
+            robotRepository.findAll(null, null)
+                .filter { it.active }
+                .forEach { robot ->
+                    robot.deactivate()
+                    robotRepository.save(robot)
+                }
+        }
+    }
 
     @Test
     @Transactional

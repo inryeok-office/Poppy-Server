@@ -2,7 +2,6 @@ package team.inreok.poppyserver.domain.execution.application
 
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
@@ -10,7 +9,6 @@ import team.inreok.poppyserver.domain.robot.application.RobotRepository
 
 @Service
 @ConditionalOnBean(ExecutionRepository::class, RobotRepository::class)
-@ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class ExecutionAllocationService(
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
