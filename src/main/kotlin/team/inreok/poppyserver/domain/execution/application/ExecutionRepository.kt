@@ -9,4 +9,6 @@ interface ExecutionRepository {
     fun findById(id: UUID): Execution?
 
     fun findByIdForAllocation(id: UUID): Execution?
+
+    fun findByIdForStatusUpdate(id: UUID): Execution?
 }

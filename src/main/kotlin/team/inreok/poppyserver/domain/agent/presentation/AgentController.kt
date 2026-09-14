@@ -29,6 +29,10 @@ import team.inreok.poppyserver.domain.agent.application.RegisterAgentRobotComman
 import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionDelivery
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionDeliveryService
+import team.inreok.poppyserver.domain.execution.application.AgentExecutionStatusService
+import team.inreok.poppyserver.domain.execution.application.ExecutionStatusReport
+import team.inreok.poppyserver.domain.execution.application.ReportExecutionStatus
+import team.inreok.poppyserver.domain.execution.application.ReportExecutionStatusCommand
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 import team.inreok.poppyserver.global.error.ApplicationException
@@ -41,6 +45,7 @@ import team.inreok.poppyserver.global.response.ApiResponse
 class AgentController(
     private val agentManagementService: AgentManagementService,
     private val agentExecutionDeliveryService: AgentExecutionDeliveryService,
+    private val agentExecutionStatusService: AgentExecutionStatusService,
 ) {
     @PostMapping("/register")
     fun register(
@@ -74,6 +79,15 @@ class AgentController(
         AgentExecutionNextResponse(
             execution = agentExecutionDeliveryService.findNext(agentId, robotId)?.toResponse(),
         ),
+    )
+
+    @PostMapping("/{agentId}/executions/{executionId}/status")
+    fun reportExecutionStatus(
+        @PathVariable agentId: UUID,
+        @PathVariable executionId: UUID,
+        @Valid @RequestBody request: AgentExecutionStatusRequest,
+    ): ApiResponse<AgentExecutionStatusResponse> = ApiResponse.success(
+        agentExecutionStatusService.report(agentId, executionId, request.toCommand()).toResponse(),
     )
 }
 
@@ -158,6 +172,29 @@ data class AgentExecutionResponse(
     val protocolVersion: Int,
 )
 
+data class AgentExecutionStatusRequest(
+    @field:NotNull val robotId: UUID?,
+    @field:NotBlank val status: String?,
+) {
+    fun toCommand(): ReportExecutionStatusCommand {
+        val requestedStatus = try {
+            ReportExecutionStatus.valueOf(requireNotNull(status))
+        } catch (_: IllegalArgumentException) {
+            throw ApplicationException(ErrorCode.EXECUTION_STATUS_UNSUPPORTED)
+        }
+        return ReportExecutionStatusCommand(
+            robotId = requireNotNull(robotId),
+            status = requestedStatus,
+        )
+    }
+}
+
+data class AgentExecutionStatusResponse(
+    val executionId: UUID,
+    val robotId: UUID,
+    val status: String,
+)
+
 private fun AgentRegistrationResult.toResponse(): AgentRegistrationResponse = AgentRegistrationResponse(
     agentId = agent.id,
     registeredAt = agent.registeredAt.toUtcLocalDateTime(),
@@ -169,6 +206,12 @@ private fun AgentExecutionDelivery.toResponse(): AgentExecutionResponse = AgentE
     robotId = robotId,
     status = status.name,
     protocolVersion = protocolVersion,
+)
+
+private fun ExecutionStatusReport.toResponse(): AgentExecutionStatusResponse = AgentExecutionStatusResponse(
+    executionId = executionId,
+    robotId = robotId,
+    status = status.name,
 )
 
 private fun Instant.toUtcLocalDateTime(): LocalDateTime = atZone(ZoneOffset.UTC).toLocalDateTime()

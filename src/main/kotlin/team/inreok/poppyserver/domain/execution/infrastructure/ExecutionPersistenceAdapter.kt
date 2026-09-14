@@ -29,13 +29,18 @@ class ExecutionPersistenceAdapter(
     override fun findByIdForAllocation(id: UUID): Execution? =
         executionJpaRepository.findByIdForAllocation(id)?.toDomain()
 
+    override fun findByIdForStatusUpdate(id: UUID): Execution? =
+        executionJpaRepository.findByIdForStatusUpdate(id)?.toDomain()
+
     private fun ExecutionEntity.updateFrom(execution: Execution) {
         id = execution.id
         status = execution.status
+        assignedRobotId = execution.assignedRobotId
     }
 
     private fun ExecutionEntity.toDomain(): Execution = Execution.restore(
         id = requireNotNull(id),
         status = status,
+        assignedRobotId = assignedRobotId,
     )
 }

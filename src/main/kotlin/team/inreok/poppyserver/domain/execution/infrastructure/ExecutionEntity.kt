@@ -17,4 +17,6 @@ class ExecutionEntity(
     @Column(nullable = false, columnDefinition = "text")
     @Enumerated(EnumType.STRING)
     var status: ExecutionStatus = ExecutionStatus.QUEUED,
+    @Column(name = "assigned_robot_id")
+    var assignedRobotId: UUID? = null,
 )

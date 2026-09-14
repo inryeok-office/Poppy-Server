@@ -22,7 +22,7 @@ class ExecutionAllocationService(
         }
 
         val robot = robotRepository.findAvailableForAllocation() ?: return null
-        execution.assign()
+        execution.assignToRobot(robot.id)
         robot.assignExecution(execution.id)
         executionRepository.save(execution)
         robotRepository.save(robot)

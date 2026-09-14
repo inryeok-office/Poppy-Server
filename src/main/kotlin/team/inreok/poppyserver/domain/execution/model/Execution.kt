@@ -5,13 +5,29 @@ import java.util.UUID
 class Execution private constructor(
     val id: UUID,
     statusValue: ExecutionStatus,
+    assignedRobotIdValue: UUID?,
 ) {
 
     var status: ExecutionStatus = statusValue
         private set
 
+    var assignedRobotId: UUID? = assignedRobotIdValue
+        private set
+
     fun assign() {
         transitionTo(ExecutionStatus.ASSIGNED)
+    }
+
+    fun assignToRobot(robotId: UUID) {
+        assign()
+        bindRobot(robotId)
+    }
+
+    fun bindRobot(robotId: UUID) {
+        check(assignedRobotId == null || assignedRobotId == robotId) {
+            "Execution이 다른 Robot에 이미 배정되어 있습니다"
+        }
+        assignedRobotId = robotId
     }
 
     fun start() {
@@ -61,11 +77,13 @@ class Execution private constructor(
         fun create(): Execution = Execution(
             id = UUID.randomUUID(),
             statusValue = ExecutionStatus.QUEUED,
+            assignedRobotIdValue = null,
         )
 
-        fun restore(id: UUID, status: ExecutionStatus): Execution = Execution(
+        fun restore(id: UUID, status: ExecutionStatus, assignedRobotId: UUID? = null): Execution = Execution(
             id = id,
             statusValue = status,
+            assignedRobotIdValue = assignedRobotId,
         )
     }
 }

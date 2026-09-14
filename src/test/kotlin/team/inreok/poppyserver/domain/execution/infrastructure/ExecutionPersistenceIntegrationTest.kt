@@ -40,6 +40,17 @@ class ExecutionPersistenceIntegrationTest : PostgresIntegrationTest() {
         assertNull(executionRepository.findById(UUID.randomUUID()))
     }
 
+    @Test
+    @Transactional
+    fun `배정된 Robot 식별자를 저장하고 복원한다`() {
+        val robotId = UUID.randomUUID()
+        val execution = Execution.create().apply { assignToRobot(robotId) }
+
+        executionRepository.save(execution)
+
+        assertEquals(robotId, executionRepository.findById(execution.id)?.assignedRobotId)
+    }
+
     @ParameterizedTest
     @EnumSource(value = ExecutionStatus::class, names = ["COMPLETED", "FAILED", "CANCELLED"])
     @Transactional

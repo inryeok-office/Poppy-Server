@@ -30,6 +30,9 @@ class RobotPersistenceAdapter(
 
     override fun findById(id: UUID): Robot? = robotJpaRepository.findById(id).orElse(null)?.toDomain()
 
+    override fun findByIdForStatusUpdate(id: UUID): Robot? =
+        robotJpaRepository.findByIdForStatusUpdate(id)?.toDomain()
+
     override fun findAvailableForAllocation(): Robot? =
         robotJpaRepository
             .findFirstByActiveTrueAndConnectionStatusAndOperationStatusAndCurrentExecutionIdIsNullOrderByIdAsc(

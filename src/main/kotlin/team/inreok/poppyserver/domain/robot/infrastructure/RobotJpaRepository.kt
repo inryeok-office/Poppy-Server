@@ -4,11 +4,17 @@ import java.util.UUID
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 
 interface RobotJpaRepository : JpaRepository<RobotEntity, UUID> {
     fun existsByAgentId(agentId: UUID): Boolean
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select robot from RobotEntity robot where robot.id = :id")
+    fun findByIdForStatusUpdate(@Param("id") id: UUID): RobotEntity?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findFirstByActiveTrueAndConnectionStatusAndOperationStatusAndCurrentExecutionIdIsNullOrderByIdAsc(
