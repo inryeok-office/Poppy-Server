@@ -39,6 +39,10 @@ Windows에서는 `./scripts/harness-check.ps1`을 사용한다.
 
 `build-and-test` Job이 끝나면 `notify-discord` Job이 `needs`로 연결되어 항상(`always()`) 실행되며, 최종 성공/실패/취소 결과를 Discord Webhook Embed로 한 번만 전송한다. 알림 Job의 성공 여부가 `build-and-test`의 실제 성공/실패 상태를 바꾸지 않는다.
 
+### 배포 설정 정적 검증
+
+`scripts/test-systemd-deployment.sh`는 systemd service 파일, 운영 env 예시, 필수 경로, 재시작·health·journal 명령, destructive command 및 secret hardcode 여부를 검증한다. 실제 Ubuntu 서버 설치나 reboot는 수행하지 않는다.
+
 ### Secret
 
 - 이름: `DISCORD_WEBHOOK_URL`

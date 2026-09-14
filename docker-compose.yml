@@ -3,12 +3,13 @@ services:
     build: .
     container_name: poppy-app
     environment:
-      SPRING_PROFILES_ACTIVE: local
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-poppy}
       DB_USERNAME: ${DB_USERNAME:-poppy}
       DB_PASSWORD: ${DB_PASSWORD:-poppy}
+      POPPY_AGENT_TOKEN: ${POPPY_AGENT_TOKEN:-}
     ports:
       - "8080:8080"
     depends_on:

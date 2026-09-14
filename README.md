@@ -39,6 +39,7 @@ Testcontainers 기반 통합 테스트가 포함되어 있어 로컬 Docker가 �
 | [`docs/commit-convention.md`](docs/commit-convention.md) | 커밋 메시지 규칙 |
 | [`docs/api-convention.md`](docs/api-convention.md) | 공통 응답/에러 포맷 |
 | [`docs/configuration.md`](docs/configuration.md) | 프로필, 환경변수, 로컬 DB 실행 |
+| [`docs/deployment.md`](docs/deployment.md) | Ubuntu systemd 기반 운영 배포와 장애 대응 |
 | [`docs/testing.md`](docs/testing.md) | 테스트 종류와 실행 방법 |
 | [`docs/ci.md`](docs/ci.md) | CI 구성과 Discord 알림 |
 | [`docs/ai-workflow.md`](docs/ai-workflow.md) | Claude Code/Codex 공통 작업 방식 |
