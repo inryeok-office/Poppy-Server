@@ -19,6 +19,8 @@
 | `DB_USERNAME` | 데이터베이스 사용자 | `poppy` |
 | `DB_PASSWORD` | 데이터베이스 비밀번호 | `poppy` |
 | `POPPY_AGENT_TOKEN` | 내부 Robot Agent API 인증 토큰 | 설정 필요 |
+| `POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS` | Robot heartbeat timeout(초) | `90` |
+| `POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS` | stale Robot 검사 주기(밀리초) | `30000` |
 
 ## 로컬 데이터베이스 실행
 

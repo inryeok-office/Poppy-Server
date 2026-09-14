@@ -1,10 +1,12 @@
 package team.inreok.poppyserver.domain.robot.infrastructure
 
+import java.time.Instant
 import java.util.UUID
 import jakarta.persistence.EntityManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Repository
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.robot.application.StaleRobotQueryRepository
 import team.inreok.poppyserver.domain.robot.model.CapabilitySupportStatus
 import team.inreok.poppyserver.domain.robot.model.Robot
 import team.inreok.poppyserver.domain.robot.model.RobotCapability
@@ -16,7 +18,7 @@ import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 class RobotPersistenceAdapter(
     private val robotJpaRepository: RobotJpaRepository,
     private val entityManager: EntityManager,
-) : RobotRepository {
+) : RobotRepository, StaleRobotQueryRepository {
     override fun save(robot: Robot): Robot {
         val existing = robotJpaRepository.findById(robot.id).orElse(null)
         val entity = existing ?: RobotEntity(id = robot.id)
@@ -70,6 +72,9 @@ class RobotPersistenceAdapter(
     }.map { it.toDomain() }
 
     override fun existsByAgentId(agentId: UUID): Boolean = robotJpaRepository.existsByAgentId(agentId)
+
+    override fun findStaleRobotIds(before: Instant): List<UUID> =
+        robotJpaRepository.findStaleRobotIds(RobotConnectionStatus.ONLINE, before)
 
     private fun RobotEntity.updateFrom(robot: Robot) {
         id = robot.id

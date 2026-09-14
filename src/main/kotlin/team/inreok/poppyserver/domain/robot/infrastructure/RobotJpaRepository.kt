@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.robot.infrastructure
 
+import java.time.Instant
 import java.util.UUID
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.Lock
@@ -11,6 +12,16 @@ import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 
 interface RobotJpaRepository : JpaRepository<RobotEntity, UUID> {
     fun existsByAgentId(agentId: UUID): Boolean
+
+    @Query(
+        "select robot.id from RobotEntity robot " +
+            "where robot.connectionStatus = :connectionStatus " +
+            "and robot.lastHeartbeatAt < :before",
+    )
+    fun findStaleRobotIds(
+        @Param("connectionStatus") connectionStatus: RobotConnectionStatus,
+        @Param("before") before: Instant,
+    ): List<UUID>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select robot from RobotEntity robot where robot.id = :id")
