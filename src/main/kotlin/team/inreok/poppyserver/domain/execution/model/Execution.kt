@@ -1,11 +1,16 @@
 package team.inreok.poppyserver.domain.execution.model
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class Execution private constructor(
     val id: UUID,
     statusValue: ExecutionStatus,
     assignedRobotIdValue: UUID?,
+    val sessionId: UUID?,
+    val blockVersion: Long?,
+    val queuedAt: Instant?,
 ) {
 
     var status: ExecutionStatus = statusValue
@@ -78,12 +83,38 @@ class Execution private constructor(
             id = UUID.randomUUID(),
             statusValue = ExecutionStatus.QUEUED,
             assignedRobotIdValue = null,
+            sessionId = null,
+            blockVersion = null,
+            queuedAt = null,
         )
 
-        fun restore(id: UUID, status: ExecutionStatus, assignedRobotId: UUID? = null): Execution = Execution(
+        fun create(
+            sessionId: UUID,
+            blockVersion: Long,
+            queuedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
+        ): Execution = Execution(
+            id = UUID.randomUUID(),
+            statusValue = ExecutionStatus.QUEUED,
+            assignedRobotIdValue = null,
+            sessionId = sessionId,
+            blockVersion = blockVersion,
+            queuedAt = queuedAt,
+        )
+
+        fun restore(
+            id: UUID,
+            status: ExecutionStatus,
+            assignedRobotId: UUID? = null,
+            sessionId: UUID? = null,
+            blockVersion: Long? = null,
+            queuedAt: Instant? = null,
+        ): Execution = Execution(
             id = id,
             statusValue = status,
             assignedRobotIdValue = assignedRobotId,
+            sessionId = sessionId,
+            blockVersion = blockVersion,
+            queuedAt = queuedAt,
         )
     }
 }
