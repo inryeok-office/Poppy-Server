@@ -15,6 +15,13 @@ class ExecutionPersistenceAdapter(
 ) : ExecutionRepository {
     override fun save(execution: Execution): Execution {
         val existing = executionJpaRepository.findById(execution.id).orElse(null)
+        if (existing != null) {
+            check(
+                existing.sessionId == execution.sessionId &&
+                    existing.blockVersion == execution.blockVersion &&
+                    existing.queuedAt == execution.queuedAt,
+            ) { "Execution provenance is immutable" }
+        }
         val entity = existing ?: ExecutionEntity(id = execution.id)
         entity.updateFrom(execution)
         if (existing == null) {
@@ -32,15 +39,24 @@ class ExecutionPersistenceAdapter(
     override fun findByIdForStatusUpdate(id: UUID): Execution? =
         executionJpaRepository.findByIdForStatusUpdate(id)?.toDomain()
 
+    override fun findActiveBySessionId(sessionId: UUID): Execution? =
+        executionJpaRepository.findActiveBySessionId(sessionId)?.toDomain()
+
     private fun ExecutionEntity.updateFrom(execution: Execution) {
         id = execution.id
         status = execution.status
         assignedRobotId = execution.assignedRobotId
+        sessionId = execution.sessionId
+        blockVersion = execution.blockVersion
+        queuedAt = execution.queuedAt
     }
 
     private fun ExecutionEntity.toDomain(): Execution = Execution.restore(
         id = requireNotNull(id),
         status = status,
         assignedRobotId = assignedRobotId,
+        sessionId = sessionId,
+        blockVersion = blockVersion,
+        queuedAt = queuedAt,
     )
 }

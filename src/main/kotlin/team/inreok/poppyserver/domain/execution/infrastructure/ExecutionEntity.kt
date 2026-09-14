@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.time.Instant
 import java.util.UUID
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 
@@ -19,4 +20,10 @@ class ExecutionEntity(
     var status: ExecutionStatus = ExecutionStatus.QUEUED,
     @Column(name = "assigned_robot_id")
     var assignedRobotId: UUID? = null,
+    @Column(name = "session_id")
+    var sessionId: UUID? = null,
+    @Column(name = "block_version")
+    var blockVersion: Long? = null,
+    @Column(name = "queued_at")
+    var queuedAt: Instant? = null,
 )

@@ -32,4 +32,6 @@ enum class ErrorCode(
     BLOCK_REVISION_NOT_FOUND(HttpStatus.NOT_FOUND, "BLOCK_REVISION_NOT_FOUND", "The Block Revision was not found"),
     SIMULATION_BLOCK_VERSION_INVALID(HttpStatus.BAD_REQUEST, "SIMULATION_BLOCK_VERSION_INVALID", "The simulation block version is invalid"),
     SIMULATION_BLOCK_VERSION_STALE(HttpStatus.CONFLICT, "SIMULATION_BLOCK_VERSION_STALE", "The simulation block version is not current"),
+    SIMULATION_PASS_NOT_FOUND(HttpStatus.CONFLICT, "SIMULATION_PASS_NOT_FOUND", "The Simulation Pass was not found"),
+    EXECUTION_SESSION_ACTIVE(HttpStatus.CONFLICT, "EXECUTION_SESSION_ACTIVE", "The Session already has an active Execution"),
 }
