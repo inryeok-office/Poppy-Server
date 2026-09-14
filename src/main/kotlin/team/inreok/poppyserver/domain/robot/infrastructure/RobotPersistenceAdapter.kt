@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 import jakarta.persistence.EntityManager
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Repository
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
 import team.inreok.poppyserver.domain.robot.application.StaleRobotQueryRepository
@@ -73,8 +74,12 @@ class RobotPersistenceAdapter(
 
     override fun existsByAgentId(agentId: UUID): Boolean = robotJpaRepository.existsByAgentId(agentId)
 
-    override fun findStaleRobotIds(before: Instant): List<UUID> =
-        robotJpaRepository.findStaleRobotIds(RobotConnectionStatus.ONLINE, before)
+    override fun findStaleRobotIds(before: Instant, limit: Int): List<UUID> =
+        robotJpaRepository.findStaleRobotIds(
+            connectionStatus = RobotConnectionStatus.ONLINE,
+            before = before,
+            pageable = PageRequest.of(0, limit),
+        )
 
     private fun RobotEntity.updateFrom(robot: Robot) {
         id = robot.id

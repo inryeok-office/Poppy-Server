@@ -5,3 +5,4 @@ poppy:
   agent:
     heartbeat-timeout-seconds: ${POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS:90}
     heartbeat-scan-interval-milliseconds: ${POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS:30000}
+    heartbeat-offline-batch-size: ${POPPY_AGENT_HEARTBEAT_OFFLINE_BATCH_SIZE:100}

@@ -21,6 +21,7 @@
 | `POPPY_AGENT_TOKEN` | 내부 Robot Agent API 인증 토큰 | 설정 필요 |
 | `POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS` | Robot heartbeat timeout(초) | `90` |
 | `POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS` | stale Robot 검사 주기(밀리초) | `30000` |
+| `POPPY_AGENT_HEARTBEAT_OFFLINE_BATCH_SIZE` | stale Robot 일괄 처리 크기 | `100` |
 
 ## 로컬 데이터베이스 실행
 

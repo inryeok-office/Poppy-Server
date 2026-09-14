@@ -6,6 +6,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import team.inreok.poppyserver.domain.robot.model.Robot
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
@@ -107,6 +108,22 @@ class RobotHeartbeatTimeoutServiceTest {
     }
 
     @Test
+    fun `stale Robot은 설정된 batch size 단위로 처리한다`() {
+        val staleRobots = listOf(
+            robot(lastHeartbeatAt = now.minusSeconds(91)),
+            robot(lastHeartbeatAt = now.minusSeconds(92)),
+        )
+        val fixture = fixture(*staleRobots.toTypedArray(), heartbeatOfflineBatchSize = 1)
+
+        fixture.service.detectStaleRobots(now)
+
+        assertEquals(2, fixture.repository.saveCount)
+        staleRobots.forEach { robot ->
+            assertEquals(RobotConnectionStatus.OFFLINE, robot.connectionStatus)
+        }
+    }
+
+    @Test
     fun `scheduler 실행은 주입된 Clock을 사용한다`() {
         val robot = robot(lastHeartbeatAt = now.minusSeconds(91))
         val fixture = fixture(
@@ -119,21 +136,42 @@ class RobotHeartbeatTimeoutServiceTest {
         assertEquals(RobotConnectionStatus.OFFLINE, robot.connectionStatus)
     }
 
+    @Test
+    fun `잘못된 timeout 설정은 서비스 생성 시 거부한다`() {
+        val repository = FakeRobotRepository(mutableMapOf())
+        val queryRepository = FakeStaleRobotQueryRepository(repository, emptyList())
+
+        assertFailsWith<IllegalArgumentException> {
+            RobotHeartbeatTimeoutService(
+                staleRobotQueryRepository = queryRepository,
+                robotOfflineBatchProcessor = RobotOfflineBatchProcessor(repository),
+                heartbeatTimeoutSeconds = 0,
+                heartbeatOfflineBatchSize = 100,
+            )
+        }
+    }
+
     private fun fixture(
         vararg robots: Robot,
         robot: Robot? = null,
         candidateIds: List<UUID>? = null,
+        heartbeatOfflineBatchSize: Int = 100,
         clock: Clock = Clock.systemUTC(),
     ): Fixture {
         val allRobots = (robots.toList() + listOfNotNull(robot)).associateBy { it.id }.toMutableMap()
         val repository = FakeRobotRepository(allRobots)
         val queryRepository = FakeStaleRobotQueryRepository(
-            candidateIds ?: allRobots.values
-                .filter { it.lastHeartbeatAt?.isBefore(now.minusSeconds(90)) == true }
-                .map { it.id },
+            repository,
+            candidateIds,
         )
         return Fixture(
-            service = RobotHeartbeatTimeoutService(queryRepository, repository, 90, clock),
+            service = RobotHeartbeatTimeoutService(
+                staleRobotQueryRepository = queryRepository,
+                robotOfflineBatchProcessor = RobotOfflineBatchProcessor(repository),
+                heartbeatTimeoutSeconds = 90,
+                heartbeatOfflineBatchSize = heartbeatOfflineBatchSize,
+                clock = clock,
+            ),
             repository = repository,
         )
     }
@@ -161,13 +199,26 @@ class RobotHeartbeatTimeoutServiceTest {
     )
 
     private class FakeStaleRobotQueryRepository(
-        private val candidateIds: List<UUID>,
+        private val repository: FakeRobotRepository,
+        initialCandidateIds: List<UUID>?,
     ) : StaleRobotQueryRepository {
-        override fun findStaleRobotIds(before: Instant): List<UUID> = candidateIds
+        private var initialCandidateIds: List<UUID>? = initialCandidateIds
+
+        override fun findStaleRobotIds(before: Instant, limit: Int): List<UUID> {
+            val initialCandidates = initialCandidateIds
+            if (initialCandidates != null) {
+                initialCandidateIds = null
+                return initialCandidates.take(limit)
+            }
+            return repository.robots.values
+                .filter { it.lastHeartbeatAt?.isBefore(before) == true && it.connectionStatus == RobotConnectionStatus.ONLINE }
+                .map { it.id }
+                .take(limit)
+        }
     }
 
     private class FakeRobotRepository(
-        private val robots: MutableMap<UUID, Robot>,
+        val robots: MutableMap<UUID, Robot>,
     ) : RobotRepository {
         var saveCount: Int = 0
 
