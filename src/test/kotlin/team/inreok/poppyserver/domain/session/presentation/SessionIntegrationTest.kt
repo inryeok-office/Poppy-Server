@@ -183,7 +183,8 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
         assertFailsWith<IllegalStateException> {
             transactionTemplate.execute {
                 val locked = sessionRepository.findByIdForUpdate(session.sessionId)!!
-                locked.advanceBlockVersion()
+                val version = locked.advanceBlockVersion()
+                blockRevisionRepository.save(BlockRevision.create(session.sessionId, version, "{\"rollback\":true}"))
                 sessionRepository.save(locked)
                 throw IllegalStateException("rollback")
             }
