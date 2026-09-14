@@ -1,0 +1,22 @@
+[Unit]
+Description=POPPY Server Docker Compose service
+Requires=docker.service
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=poppy
+SupplementaryGroups=docker
+WorkingDirectory=/opt/poppy-server
+EnvironmentFile=/etc/poppy-server/poppy-server.env
+ExecStart=/usr/bin/docker compose --env-file /etc/poppy-server/poppy-server.env up --no-build --abort-on-container-exit --exit-code-from app
+ExecStop=/usr/bin/docker compose --env-file /etc/poppy-server/poppy-server.env stop --timeout 30
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGTERM
+KillMode=control-group
+TimeoutStopSec=45s
+
+[Install]
+WantedBy=multi-user.target

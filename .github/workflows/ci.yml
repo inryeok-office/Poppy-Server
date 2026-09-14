@@ -36,6 +36,9 @@ jobs:
       - name: Harness check
         run: bash scripts/harness-check.sh
 
+      - name: Systemd deployment static tests
+        run: bash scripts/test-systemd-deployment.sh
+
       - name: Discord payload tests
         run: bash scripts/test-discord-notify.sh
 
