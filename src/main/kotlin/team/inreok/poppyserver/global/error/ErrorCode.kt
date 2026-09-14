@@ -24,4 +24,8 @@ enum class ErrorCode(
     AGENT_ROBOT_BINDING_MISMATCH(HttpStatus.CONFLICT, "AGENT_ROBOT_BINDING_MISMATCH", "The Agent and Robot binding does not match"),
     HEARTBEAT_PAYLOAD_INVALID(HttpStatus.BAD_REQUEST, "HEARTBEAT_PAYLOAD_INVALID", "The heartbeat payload is invalid"),
     EXECUTION_DELIVERY_INVARIANT_VIOLATED(HttpStatus.INTERNAL_SERVER_ERROR, "EXECUTION_DELIVERY_INVARIANT_VIOLATED", "The Execution delivery assignment is invalid"),
+    EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "EXECUTION_NOT_FOUND", "The Execution was not found"),
+    EXECUTION_ROBOT_MISMATCH(HttpStatus.CONFLICT, "EXECUTION_ROBOT_MISMATCH", "The Execution is not assigned to the Robot"),
+    EXECUTION_STATUS_UNSUPPORTED(HttpStatus.BAD_REQUEST, "EXECUTION_STATUS_UNSUPPORTED", "The Execution status is unsupported"),
+    EXECUTION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "EXECUTION_STATUS_TRANSITION_INVALID", "The Execution status transition is invalid"),
 }

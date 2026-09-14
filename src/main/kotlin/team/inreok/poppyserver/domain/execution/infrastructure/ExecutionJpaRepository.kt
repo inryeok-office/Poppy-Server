@@ -11,4 +11,8 @@ interface ExecutionJpaRepository : JpaRepository<ExecutionEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select execution from ExecutionEntity execution where execution.id = :id")
     fun findByIdForAllocation(@Param("id") id: UUID): ExecutionEntity?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select execution from ExecutionEntity execution where execution.id = :id")
+    fun findByIdForStatusUpdate(@Param("id") id: UUID): ExecutionEntity?
 }

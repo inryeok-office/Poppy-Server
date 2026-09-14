@@ -72,6 +72,11 @@ class Robot private constructor(
         currentExecutionId = executionId
     }
 
+    fun releaseExecution(executionId: UUID) {
+        check(currentExecutionId == executionId) { "현재 Robot에 해당 Execution이 배정되어 있지 않습니다" }
+        currentExecutionId = null
+    }
+
     private val mutableCapabilities: MutableMap<String, RobotCapability> = mutableMapOf()
 
     val capabilities: Map<String, RobotCapability>
