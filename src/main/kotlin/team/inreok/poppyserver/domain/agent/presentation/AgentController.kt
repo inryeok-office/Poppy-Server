@@ -12,10 +12,12 @@ import jakarta.validation.constraints.NotNull
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import tools.jackson.databind.JsonNode
 import team.inreok.poppyserver.domain.agent.application.AgentManagementService
@@ -25,6 +27,8 @@ import team.inreok.poppyserver.domain.agent.application.HeartbeatRobotCommand
 import team.inreok.poppyserver.domain.agent.application.RegisterAgentCommand
 import team.inreok.poppyserver.domain.agent.application.RegisterAgentRobotCommand
 import team.inreok.poppyserver.domain.agent.model.Agent
+import team.inreok.poppyserver.domain.execution.application.AgentExecutionDelivery
+import team.inreok.poppyserver.domain.execution.application.AgentExecutionDeliveryService
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 import team.inreok.poppyserver.global.error.ApplicationException
@@ -36,6 +40,7 @@ import team.inreok.poppyserver.global.response.ApiResponse
 @RequestMapping("/api/v1/internal/agents")
 class AgentController(
     private val agentManagementService: AgentManagementService,
+    private val agentExecutionDeliveryService: AgentExecutionDeliveryService,
 ) {
     @PostMapping("/register")
     fun register(
@@ -60,6 +65,16 @@ class AgentController(
             ),
         )
     }
+
+    @GetMapping("/{agentId}/executions/next")
+    fun nextExecution(
+        @PathVariable agentId: UUID,
+        @RequestParam robotId: UUID,
+    ): ApiResponse<AgentExecutionNextResponse> = ApiResponse.success(
+        AgentExecutionNextResponse(
+            execution = agentExecutionDeliveryService.findNext(agentId, robotId)?.toResponse(),
+        ),
+    )
 }
 
 data class AgentRegistrationRequest(
@@ -132,10 +147,28 @@ data class AgentHeartbeatResponse(
     val acceptedAt: LocalDateTime,
 )
 
+data class AgentExecutionNextResponse(
+    val execution: AgentExecutionResponse?,
+)
+
+data class AgentExecutionResponse(
+    val executionId: UUID,
+    val robotId: UUID,
+    val status: String,
+    val protocolVersion: Int,
+)
+
 private fun AgentRegistrationResult.toResponse(): AgentRegistrationResponse = AgentRegistrationResponse(
     agentId = agent.id,
     registeredAt = agent.registeredAt.toUtcLocalDateTime(),
     acceptedRobotIds = acceptedRobotIds,
+)
+
+private fun AgentExecutionDelivery.toResponse(): AgentExecutionResponse = AgentExecutionResponse(
+    executionId = executionId,
+    robotId = robotId,
+    status = status.name,
+    protocolVersion = protocolVersion,
 )
 
 private fun Instant.toUtcLocalDateTime(): LocalDateTime = atZone(ZoneOffset.UTC).toLocalDateTime()
