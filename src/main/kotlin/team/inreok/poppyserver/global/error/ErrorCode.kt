@@ -23,4 +23,5 @@ enum class ErrorCode(
     AGENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AGENT_NOT_FOUND", "The Agent was not found"),
     AGENT_ROBOT_BINDING_MISMATCH(HttpStatus.CONFLICT, "AGENT_ROBOT_BINDING_MISMATCH", "The Agent and Robot binding does not match"),
     HEARTBEAT_PAYLOAD_INVALID(HttpStatus.BAD_REQUEST, "HEARTBEAT_PAYLOAD_INVALID", "The heartbeat payload is invalid"),
+    EXECUTION_DELIVERY_INVARIANT_VIOLATED(HttpStatus.INTERNAL_SERVER_ERROR, "EXECUTION_DELIVERY_INVARIANT_VIOLATED", "The Execution delivery assignment is invalid"),
 }
