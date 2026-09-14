@@ -2,7 +2,6 @@ package team.inreok.poppyserver.domain.session.application
 
 import java.time.Instant
 import java.util.UUID
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -12,7 +11,6 @@ import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 
 @Service
-@ConditionalOnBean(SessionRepository::class, BlockRevisionRepository::class)
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class SessionService(
     private val sessionRepository: SessionRepository,
