@@ -28,4 +28,5 @@ enum class ErrorCode(
     EXECUTION_ROBOT_MISMATCH(HttpStatus.CONFLICT, "EXECUTION_ROBOT_MISMATCH", "The Execution is not assigned to the Robot"),
     EXECUTION_STATUS_UNSUPPORTED(HttpStatus.BAD_REQUEST, "EXECUTION_STATUS_UNSUPPORTED", "The Execution status is unsupported"),
     EXECUTION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "EXECUTION_STATUS_TRANSITION_INVALID", "The Execution status transition is invalid"),
+    SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "The Session was not found"),
 }
