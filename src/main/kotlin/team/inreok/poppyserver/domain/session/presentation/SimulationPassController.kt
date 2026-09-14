@@ -26,9 +26,11 @@ class SimulationPassController(
     fun recordSimulationPass(
         @PathVariable sessionId: UUID,
         @Valid @RequestBody request: SimulationPassRequest,
-    ): ResponseEntity<ApiResponse<SimulationPassResponse>> = ResponseEntity.status(HttpStatus.CREATED).body(
-        ApiResponse.success(simulationPassService.recordSimulationPass(sessionId, requireNotNull(request.blockVersion)).toResponse()),
-    )
+    ): ResponseEntity<ApiResponse<SimulationPassResponse>> {
+        val result = simulationPassService.recordSimulationPass(sessionId, requireNotNull(request.blockVersion))
+        val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
+        return ResponseEntity.status(status).body(ApiResponse.success(result.toResponse()))
+    }
 }
 
 data class SimulationPassRequest(

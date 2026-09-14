@@ -78,7 +78,11 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         val first = simulationPassService.recordSimulationPass(session.sessionId, 1)
         val second = simulationPassService.recordSimulationPass(session.sessionId, 1)
 
-        assertEquals(first, second)
+        assertTrue(first.created)
+        assertTrue(!second.created)
+        assertEquals(first.sessionId, second.sessionId)
+        assertEquals(first.blockVersion, second.blockVersion)
+        assertEquals(first.passedAt, second.passedAt)
         assertEquals(
             1L,
             jdbcTemplate.queryForObject(
@@ -232,7 +236,10 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
             start.countDown()
             val results = futures.map { it.get(30, TimeUnit.SECONDS) }
 
-            assertEquals(results[0], results[1])
+            assertEquals(results[0].sessionId, results[1].sessionId)
+            assertEquals(results[0].blockVersion, results[1].blockVersion)
+            assertEquals(results[0].passedAt, results[1].passedAt)
+            assertEquals(1, results.count { it.created })
             assertEquals(
                 1L,
                 jdbcTemplate.queryForObject(
@@ -306,7 +313,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockVersion\":1}"),
         )
-            .andExpect(status().isCreated)
+            .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.blockVersion").value(1))
             .andReturn()
             .response

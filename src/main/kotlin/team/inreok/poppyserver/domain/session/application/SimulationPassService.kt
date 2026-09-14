@@ -29,11 +29,16 @@ class SimulationPassService(
             throw ApplicationException(ErrorCode.BLOCK_REVISION_NOT_FOUND)
         }
         val existing = simulationPassRepository.findById(sessionId, blockVersion)
-        val pass = existing ?: simulationPassRepository.save(SimulationPass.create(sessionId, blockVersion))
+        val (pass, created) = if (existing != null) {
+            existing to false
+        } else {
+            simulationPassRepository.save(SimulationPass.create(sessionId, blockVersion)) to true
+        }
         return SimulationPassRecordResult(
             sessionId = pass.sessionId,
             blockVersion = pass.blockVersion,
             passedAt = pass.passedAt,
+            created = created,
         )
     }
 }
@@ -42,4 +47,5 @@ data class SimulationPassRecordResult(
     val sessionId: UUID,
     val blockVersion: Long,
     val passedAt: java.time.Instant,
+    val created: Boolean,
 )
