@@ -63,6 +63,7 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
 
         assertEquals(robot.id, allocatedRobotId)
         assertEquals(ExecutionStatus.ASSIGNED, executionRepository.findById(execution.id)?.status)
+        assertEquals(robot.id, executionRepository.findById(execution.id)?.assignedRobotId)
         assertEquals(execution.id, robotRepository.findById(robot.id)?.currentExecutionId)
     }
 

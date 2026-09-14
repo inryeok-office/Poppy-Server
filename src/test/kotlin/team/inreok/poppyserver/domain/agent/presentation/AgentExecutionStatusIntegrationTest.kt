@@ -172,6 +172,43 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `terminal 동일 상태 보고는 최초 배정 Robot ID를 확인한다`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.RUNNING)
+        val assignedRobot = saveRobot(agent.id, execution.id)
+        val idleRobot = saveRobot(agent.id, null)
+
+        report(agent.id, execution.id, idleRobot.id, "COMPLETED")
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("EXECUTION_ROBOT_MISMATCH"))
+
+        report(agent.id, execution.id, assignedRobot.id, "COMPLETED")
+            .andExpect(status().isOk)
+        assertEquals(null, robotRepository.findById(assignedRobot.id)?.currentExecutionId)
+        assertEquals(null, robotRepository.findById(idleRobot.id)?.currentExecutionId)
+    }
+
+    @Test
+    fun `terminal 동일 상태 재보고는 Robot의 새 점유를 해제하지 않는다`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.RUNNING)
+        val robot = saveRobot(agent.id, execution.id)
+
+        report(agent.id, execution.id, robot.id, "COMPLETED")
+            .andExpect(status().isOk)
+        val nextExecution = saveExecution(ExecutionStatus.ASSIGNED)
+        inTransaction {
+            val reboundRobot = robotRepository.findById(robot.id)!!
+            reboundRobot.assignExecution(nextExecution.id)
+            robotRepository.save(reboundRobot)
+        }
+
+        report(agent.id, execution.id, robot.id, "COMPLETED")
+            .andExpect(status().isOk)
+        assertEquals(nextExecution.id, robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
     fun `currentExecutionId 불일치와 존재하지 않는 Execution을 거부한다`() {
         val agent = saveAgent()
         val execution = saveExecution(ExecutionStatus.RUNNING)
@@ -289,7 +326,7 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
     }
 
     private fun saveRobot(agentId: UUID, currentExecutionId: UUID?): Robot = inTransaction {
-        robotRepository.save(
+        val robot = robotRepository.save(
             Robot.register(
                 alias = "status-robot-${UUID.randomUUID()}",
                 model = "GO2",
@@ -304,6 +341,13 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
                 )
             },
         )
+        if (currentExecutionId != null) {
+            executionRepository.findById(currentExecutionId)?.let { execution ->
+                execution.bindRobot(robot.id)
+                executionRepository.save(execution)
+            }
+        }
+        robot
     }
 
     private fun <T> inTransaction(action: () -> T): T = requireNotNull(

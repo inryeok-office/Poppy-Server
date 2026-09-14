@@ -35,15 +35,27 @@ class AgentExecutionStatusService(
 
         val targetStatus = command.status.toExecutionStatus()
         val sameStatus = execution.status == targetStatus
-        val releasedReplay = sameStatus && targetStatus.isTerminal() && robot.currentExecutionId == null
-        if (robot.currentExecutionId != executionId && !releasedReplay) {
+        if (execution.assignedRobotId != null && execution.assignedRobotId != command.robotId) {
             throw ApplicationException(ErrorCode.EXECUTION_ROBOT_MISMATCH)
+        }
+        val currentAssignment = robot.currentExecutionId == executionId
+        val releasedReplay = sameStatus && targetStatus.isTerminal() && execution.assignedRobotId == command.robotId
+        if (!currentAssignment && !releasedReplay) {
+            throw ApplicationException(ErrorCode.EXECUTION_ROBOT_MISMATCH)
+        }
+        var executionChanged = false
+        if (execution.assignedRobotId == null) {
+            execution.bindRobot(command.robotId)
+            executionChanged = true
         }
         if (!sameStatus) {
             transition(execution, targetStatus)
+            executionChanged = true
+        }
+        if (executionChanged) {
             executionRepository.save(execution)
         }
-        if (targetStatus.isTerminal() && robot.currentExecutionId == executionId) {
+        if (targetStatus.isTerminal() && currentAssignment) {
             robot.releaseExecution(executionId)
             robotRepository.save(robot)
         }

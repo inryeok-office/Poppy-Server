@@ -35,10 +35,12 @@ class ExecutionPersistenceAdapter(
     private fun ExecutionEntity.updateFrom(execution: Execution) {
         id = execution.id
         status = execution.status
+        assignedRobotId = execution.assignedRobotId
     }
 
     private fun ExecutionEntity.toDomain(): Execution = Execution.restore(
         id = requireNotNull(id),
         status = status,
+        assignedRobotId = assignedRobotId,
     )
 }
