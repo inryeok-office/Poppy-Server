@@ -1,6 +1,7 @@
 package team.inreok.poppyserver.domain.execution.presentation
 
 import java.util.UUID
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -11,6 +12,7 @@ import team.inreok.poppyserver.domain.execution.application.ExecutionCancellatio
 import team.inreok.poppyserver.global.response.ApiResponse
 
 @RestController
+@ConditionalOnBean(ExecutionCancellationService::class)
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 @RequestMapping("/api/v1/executions")
 class ExecutionCancellationController(
