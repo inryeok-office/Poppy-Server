@@ -33,7 +33,7 @@ repository를 `/opt/poppy-server`에 배치한 뒤 위의 `chown`을 다시 실�
 
 ```bash
 sudo install -d -m 0750 /etc/poppy-server
-sudo install -m 0600 deploy/systemd/poppy-server.env.example /etc/poppy-server/poppy-server.env
+sudo install -o root -g poppy -m 0640 deploy/systemd/poppy-server.env.example /etc/poppy-server/poppy-server.env
 sudoedit /etc/poppy-server/poppy-server.env
 ```
 

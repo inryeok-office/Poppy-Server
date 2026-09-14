@@ -32,6 +32,7 @@ require_file "$compose_file"
 if [ -f "$service_file" ]; then
   require_match "$service_file" '^After=.*network-online\.target.*docker\.service'
   require_match "$service_file" '^WorkingDirectory=/opt/poppy-server$'
+  require_match "$service_file" '^Group=poppy$'
   require_match "$service_file" '^EnvironmentFile=/etc/poppy-server/poppy-server\.env$'
   require_match "$service_file" '^ExecStart=/usr/bin/docker compose --env-file /etc/poppy-server/poppy-server\.env up --no-build --abort-on-container-exit --exit-code-from app$'
   require_match "$service_file" '^ExecStop=/usr/bin/docker compose --env-file /etc/poppy-server/poppy-server\.env stop --timeout 30$'
@@ -63,6 +64,7 @@ if [ -f "$deployment_doc" ]; then
   require_match "$deployment_doc" 'systemctl status poppy-server\.service'
   require_match "$deployment_doc" 'journalctl -u poppy-server\.service'
   require_match "$deployment_doc" '127\.0\.0\.1:8080/actuator/health'
+  require_match "$deployment_doc" 'install -o root -g poppy -m 0640 deploy/systemd/poppy-server\.env\.example /etc/poppy-server/poppy-server\.env'
   require_match "$deployment_doc" 'docker compose down -v'
 fi
 
