@@ -1,10 +1,10 @@
 package team.inreok.poppyserver.domain.execution.application
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 
 @Service
-@ConditionalOnBean(ExecutionAllocationService::class, QueuedExecutionQueryRepository::class)
+@ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class QueueDispatchService(
     private val queuedExecutionQueryRepository: QueuedExecutionQueryRepository,
     private val executionAllocationService: ExecutionAllocationService,
