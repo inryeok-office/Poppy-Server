@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.session.application.SessionAccessVerifier
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 
@@ -17,7 +18,18 @@ import team.inreok.poppyserver.global.error.ErrorCode
 class ExecutionCancellationService(
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
+    private val sessionAccessVerifier: SessionAccessVerifier,
 ) {
+    @Transactional
+    fun cancelForSession(executionId: UUID, sessionToken: String?): ExecutionCancellationResult {
+        val execution = executionRepository.findById(executionId)
+            ?: throw ApplicationException(ErrorCode.EXECUTION_NOT_FOUND)
+        val sessionId = execution.sessionId
+            ?: throw ApplicationException(ErrorCode.EXECUTION_ACCESS_DENIED)
+        sessionAccessVerifier.verifyOwnership(sessionId, sessionToken)
+        return cancel(executionId)
+    }
+
     @Transactional
     fun cancel(executionId: UUID): ExecutionCancellationResult {
         val execution = executionRepository.findByIdForStatusUpdate(executionId)

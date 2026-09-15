@@ -9,4 +9,6 @@ interface SessionRepository {
     fun findById(id: UUID): Session?
 
     fun findByIdForUpdate(id: UUID): Session?
+
+    fun findByTokenDigest(tokenDigest: String): Session?
 }

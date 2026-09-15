@@ -10,10 +10,12 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import team.inreok.poppyserver.domain.session.application.SimulationPassRecordResult
 import team.inreok.poppyserver.domain.session.application.SimulationPassService
+import team.inreok.poppyserver.domain.session.application.SessionAccessVerifier
 import team.inreok.poppyserver.global.response.ApiResponse
 
 @RestController
@@ -21,12 +23,15 @@ import team.inreok.poppyserver.global.response.ApiResponse
 @RequestMapping("/api/v1/sessions")
 class SimulationPassController(
     private val simulationPassService: SimulationPassService,
+    private val sessionAccessVerifier: SessionAccessVerifier,
 ) {
     @PostMapping("/{sessionId}/simulation-passes")
     fun recordSimulationPass(
         @PathVariable sessionId: UUID,
+        @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String?,
         @Valid @RequestBody request: SimulationPassRequest,
     ): ResponseEntity<ApiResponse<SimulationPassResponse>> {
+        sessionAccessVerifier.verify(sessionId, sessionToken)
         val result = simulationPassService.recordSimulationPass(sessionId, requireNotNull(request.blockVersion))
         val status = if (result.created) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(ApiResponse.success(result.toResponse()))

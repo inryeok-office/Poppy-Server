@@ -296,6 +296,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         val first = mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":1}"),
         )
             .andExpect(status().isCreated)
@@ -311,6 +312,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         val second = mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":1}"),
         )
             .andExpect(status().isOk)
@@ -330,6 +332,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":}"),
         )
             .andExpect(status().isBadRequest)
@@ -338,6 +341,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{}"),
         )
             .andExpect(status().isBadRequest)
@@ -346,6 +350,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":0}"),
         )
             .andExpect(status().isBadRequest)
@@ -354,6 +359,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":2}"),
         )
             .andExpect(status().isConflict)

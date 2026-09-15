@@ -29,6 +29,7 @@ import team.inreok.poppyserver.domain.robot.application.RobotRepository
 import team.inreok.poppyserver.domain.robot.model.Robot
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
+import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
@@ -59,6 +60,11 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
+
+    @Autowired
+    lateinit var sessionService: SessionService
+
+    private val sessionTokens = mutableMapOf<UUID, String>()
 
     @Test
     fun `QUEUED Execution을 CANCELLED로 변경한다`() {
@@ -219,38 +225,55 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
         }
     }
 
+    @Test
+    fun `legacy provenance Execution cannot be cancelled through Session access`() {
+        val execution = inTransaction { executionRepository.save(Execution.create()) }
+
+        cancel(execution.id)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("EXECUTION_ACCESS_DENIED"))
+    }
+
     private fun cancel(executionId: UUID) = mockMvc.perform(
-        post("/api/v1/executions/$executionId/cancel"),
+        post("/api/v1/executions/$executionId/cancel")
+            .header("X-Session-Token", sessionTokens[executionId] ?: ""),
     )
 
-    private fun saveExecution(status: ExecutionStatus): Execution = inTransaction {
-        val execution = Execution.create()
-        when (status) {
-            ExecutionStatus.QUEUED -> Unit
-            ExecutionStatus.ASSIGNED -> execution.assign()
-            ExecutionStatus.RUNNING -> {
-                execution.assign()
-                execution.start()
+    private fun saveExecution(status: ExecutionStatus): Execution {
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(session.sessionId, "{}")
+        return inTransaction {
+            val execution = Execution.create(session.sessionId, 1)
+            when (status) {
+                ExecutionStatus.QUEUED -> Unit
+                ExecutionStatus.ASSIGNED -> execution.assign()
+                ExecutionStatus.RUNNING -> {
+                    execution.assign()
+                    execution.start()
+                }
+                ExecutionStatus.COMPLETED -> {
+                    execution.assign()
+                    execution.start()
+                    execution.complete()
+                }
+                ExecutionStatus.FAILED -> {
+                    execution.assign()
+                    execution.fail()
+                }
+                ExecutionStatus.CANCELLED -> execution.cancel()
             }
-            ExecutionStatus.COMPLETED -> {
-                execution.assign()
-                execution.start()
-                execution.complete()
-            }
-            ExecutionStatus.FAILED -> {
-                execution.assign()
-                execution.fail()
-            }
-            ExecutionStatus.CANCELLED -> execution.cancel()
+            sessionTokens[execution.id] = session.sessionToken
+            executionRepository.save(execution)
         }
-        executionRepository.save(execution)
     }
 
     private fun saveAssignedFixture(
         status: ExecutionStatus = ExecutionStatus.ASSIGNED,
         currentExecutionId: UUID? = null,
     ): AssignedFixture {
-        val execution = Execution.create()
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(session.sessionId, "{}")
+        val execution = Execution.create(session.sessionId, 1)
         val robot = saveRobot(currentExecutionId = currentExecutionId ?: execution.id)
         inTransaction {
             execution.apply {
@@ -263,6 +286,7 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
             }
             executionRepository.save(execution)
         }
+        sessionTokens[execution.id] = session.sessionToken
         return AssignedFixture(execution, robot, currentExecutionId ?: execution.id)
     }
 

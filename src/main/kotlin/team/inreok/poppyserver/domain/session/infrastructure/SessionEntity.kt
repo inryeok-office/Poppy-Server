@@ -16,4 +16,6 @@ class SessionEntity(
     var currentBlockVersion: Long = 0,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.EPOCH,
+    @Column(name = "session_token_digest", unique = true)
+    var sessionTokenDigest: String? = null,
 )

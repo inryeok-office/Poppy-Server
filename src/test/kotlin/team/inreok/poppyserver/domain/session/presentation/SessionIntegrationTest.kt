@@ -60,6 +60,7 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.sessionId").isNotEmpty)
+            .andExpect(jsonPath("$.data.sessionToken").isNotEmpty)
             .andExpect(jsonPath("$.data.currentBlockVersion").value(0))
             .andExpect(jsonPath("$.error").value(null))
     }
@@ -114,6 +115,7 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/block-revisions")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"document\":{\"blocks\":[{\"custom\":42}]}}"),
         )
             .andExpect(status().isCreated)
