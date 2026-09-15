@@ -26,4 +26,8 @@ class ExecutionEntity(
     var blockVersion: Long? = null,
     @Column(name = "queued_at")
     var queuedAt: Instant? = null,
+    @Column(name = "started_at")
+    var startedAt: Instant? = null,
+    @Column(name = "finished_at")
+    var finishedAt: Instant? = null,
 )

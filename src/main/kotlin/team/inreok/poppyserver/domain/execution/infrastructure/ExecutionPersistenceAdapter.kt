@@ -49,6 +49,8 @@ class ExecutionPersistenceAdapter(
         sessionId = execution.sessionId
         blockVersion = execution.blockVersion
         queuedAt = execution.queuedAt
+        startedAt = execution.startedAt
+        finishedAt = execution.finishedAt
     }
 
     private fun ExecutionEntity.toDomain(): Execution = Execution.restore(
@@ -58,5 +60,7 @@ class ExecutionPersistenceAdapter(
         sessionId = sessionId,
         blockVersion = blockVersion,
         queuedAt = queuedAt,
+        startedAt = startedAt,
+        finishedAt = finishedAt,
     )
 }

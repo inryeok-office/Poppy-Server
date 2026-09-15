@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.execution.model
 
+import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -25,6 +26,41 @@ class ExecutionTest {
         execution.complete()
 
         assertEquals(ExecutionStatus.COMPLETED, execution.status)
+    }
+
+    @Test
+    fun `RUNNING 진입 시각과 terminal 시각을 최초 전환 시 기록한다`() {
+        val startedAt = Instant.parse("2026-09-15T00:00:01.123456Z")
+        val finishedAt = Instant.parse("2026-09-15T00:00:02.654321Z")
+        val execution = Execution.create()
+
+        execution.assign()
+        execution.start(startedAt)
+        execution.complete(finishedAt)
+
+        assertEquals(startedAt, execution.startedAt)
+        assertEquals(finishedAt, execution.finishedAt)
+    }
+
+    @Test
+    fun `생성 및 배정 상태에서는 lifecycle 시각이 null이다`() {
+        val created = Execution.create()
+        val assigned = Execution.create().apply { assign() }
+
+        assertEquals(null, created.startedAt)
+        assertEquals(null, created.finishedAt)
+        assertEquals(null, assigned.startedAt)
+        assertEquals(null, assigned.finishedAt)
+    }
+
+    @Test
+    fun `실패와 취소도 terminal 시각을 기록한다`() {
+        val finishedAt = Instant.parse("2026-09-15T00:00:03Z")
+        val failed = Execution.create().apply { assign(); fail(finishedAt) }
+        val cancelled = Execution.create().apply { cancel(finishedAt) }
+
+        assertEquals(finishedAt, failed.finishedAt)
+        assertEquals(finishedAt, cancelled.finishedAt)
     }
 
     @Test

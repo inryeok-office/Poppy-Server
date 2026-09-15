@@ -11,6 +11,8 @@ class Execution private constructor(
     val sessionId: UUID?,
     val blockVersion: Long?,
     val queuedAt: Instant?,
+    private var startedAtValue: Instant?,
+    private var finishedAtValue: Instant?,
 ) {
 
     var status: ExecutionStatus = statusValue
@@ -18,6 +20,12 @@ class Execution private constructor(
 
     var assignedRobotId: UUID? = assignedRobotIdValue
         private set
+
+    val startedAt: Instant?
+        get() = startedAtValue
+
+    val finishedAt: Instant?
+        get() = finishedAtValue
 
     fun assign() {
         transitionTo(ExecutionStatus.ASSIGNED)
@@ -35,20 +43,32 @@ class Execution private constructor(
         assignedRobotId = robotId
     }
 
-    fun start() {
+    fun start(at: Instant = now()) {
         transitionTo(ExecutionStatus.RUNNING)
+        if (startedAt == null) {
+            startedAtValue = at.truncatedTo(ChronoUnit.MICROS)
+        }
     }
 
-    fun complete() {
+    fun complete(at: Instant = now()) {
         transitionTo(ExecutionStatus.COMPLETED)
+        finish(at)
     }
 
-    fun fail() {
+    fun fail(at: Instant = now()) {
         transitionTo(ExecutionStatus.FAILED)
+        finish(at)
     }
 
-    fun cancel() {
+    fun cancel(at: Instant = now()) {
         transitionTo(ExecutionStatus.CANCELLED)
+        finish(at)
+    }
+
+    private fun finish(at: Instant) {
+        if (finishedAt == null) {
+            finishedAtValue = at.truncatedTo(ChronoUnit.MICROS)
+        }
     }
 
     private fun transitionTo(nextStatus: ExecutionStatus) {
@@ -86,6 +106,8 @@ class Execution private constructor(
             sessionId = null,
             blockVersion = null,
             queuedAt = null,
+            startedAtValue = null,
+            finishedAtValue = null,
         )
 
         fun create(
@@ -99,6 +121,8 @@ class Execution private constructor(
             sessionId = sessionId,
             blockVersion = blockVersion,
             queuedAt = queuedAt,
+            startedAtValue = null,
+            finishedAtValue = null,
         )
 
         fun restore(
@@ -108,6 +132,8 @@ class Execution private constructor(
             sessionId: UUID? = null,
             blockVersion: Long? = null,
             queuedAt: Instant? = null,
+            startedAt: Instant? = null,
+            finishedAt: Instant? = null,
         ): Execution = Execution(
             id = id,
             statusValue = status,
@@ -115,6 +141,10 @@ class Execution private constructor(
             sessionId = sessionId,
             blockVersion = blockVersion,
             queuedAt = queuedAt,
+            startedAtValue = startedAt,
+            finishedAtValue = finishedAt,
         )
+
+        private fun now(): Instant = Instant.now()
     }
 }
