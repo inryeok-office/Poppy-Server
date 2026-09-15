@@ -17,23 +17,27 @@ import team.inreok.poppyserver.global.error.ErrorCode
 class AgentRegistrationTransaction(
     private val agentRepository: AgentRepository,
     private val robotManagementService: RobotManagementService,
+    private val agentCredentialService: AgentCredentialService,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     @Transactional
     fun register(command: RegisterAgentCommand): AgentRegistrationResult {
         val existingAgent = agentRepository.findByName(command.agentName)
+        val issuedCredential = agentCredentialService.issue()
         val agent = existingAgent ?: Agent.register(
             name = command.agentName,
             agentVersion = command.agentVersion,
             sdkVersion = command.sdkVersion,
             platform = command.platform,
             registeredAt = Instant.now(clock),
+            credentialDigest = issuedCredential.digest,
         )
         existingAgent?.refreshRegistrationMetadata(
             agentVersion = command.agentVersion,
             sdkVersion = command.sdkVersion,
             platform = command.platform,
         )
+        existingAgent?.rotateCredential(issuedCredential.digest)
         val persistedAgent = try {
             agentRepository.save(agent)
         } catch (exception: DataIntegrityViolationException) {
@@ -55,7 +59,7 @@ class AgentRegistrationTransaction(
                 ),
             ).id
         }
-        return AgentRegistrationResult(persistedAgent, acceptedRobotIds)
+        return AgentRegistrationResult(persistedAgent, acceptedRobotIds, issuedCredential.raw)
     }
 }
 

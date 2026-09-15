@@ -9,4 +9,6 @@ interface AgentRepository {
     fun findById(id: UUID): Agent?
 
     fun findByName(name: String): Agent?
+
+    fun findByCredentialDigest(digest: String): Agent?
 }

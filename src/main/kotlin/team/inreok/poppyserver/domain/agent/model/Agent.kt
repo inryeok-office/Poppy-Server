@@ -11,6 +11,7 @@ class Agent private constructor(
     platformValue: String,
     registeredAtValue: Instant,
     lastHeartbeatAtValue: Instant?,
+    credentialDigestValue: String?,
 ) {
     val name: String = requireNotBlank(nameValue, "agentName")
     var agentVersion: String = requireNotBlank(agentVersionValue, "agentVersion")
@@ -23,6 +24,11 @@ class Agent private constructor(
 
     var lastHeartbeatAt: Instant? = lastHeartbeatAtValue
         private set
+
+    private var credentialDigestValue: String? = credentialDigestValue
+
+    val credentialDigest: String?
+        get() = credentialDigestValue
 
     fun recordHeartbeat(at: Instant) {
         lastHeartbeatAt = at
@@ -38,6 +44,10 @@ class Agent private constructor(
         this.platform = requireNotBlank(platform, "platform")
     }
 
+    fun rotateCredential(digest: String) {
+        credentialDigestValue = requireNotBlank(digest, "credentialDigest")
+    }
+
     companion object {
         fun register(
             name: String,
@@ -45,6 +55,7 @@ class Agent private constructor(
             sdkVersion: String,
             platform: String,
             registeredAt: Instant,
+            credentialDigest: String? = null,
         ): Agent = Agent(
             id = UUID.randomUUID(),
             nameValue = name,
@@ -53,6 +64,7 @@ class Agent private constructor(
             platformValue = platform,
             registeredAtValue = registeredAt,
             lastHeartbeatAtValue = null,
+            credentialDigestValue = credentialDigest,
         )
 
         fun restore(
@@ -63,6 +75,7 @@ class Agent private constructor(
             platform: String,
             registeredAt: Instant,
             lastHeartbeatAt: Instant?,
+            credentialDigest: String? = null,
         ): Agent = Agent(
             id = id,
             nameValue = name,
@@ -71,6 +84,7 @@ class Agent private constructor(
             platformValue = platform,
             registeredAtValue = registeredAt,
             lastHeartbeatAtValue = lastHeartbeatAt,
+            credentialDigestValue = credentialDigest,
         )
 
         private fun requireNotBlank(value: String, field: String): String {

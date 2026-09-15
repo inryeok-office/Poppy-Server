@@ -107,4 +107,5 @@ data class HeartbeatRobotCommand(
 data class AgentRegistrationResult(
     val agent: Agent,
     val acceptedRobotIds: List<UUID>,
+    val agentToken: String,
 )

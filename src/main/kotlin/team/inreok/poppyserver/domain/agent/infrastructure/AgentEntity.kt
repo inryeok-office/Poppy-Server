@@ -24,4 +24,6 @@ class AgentEntity(
     var registeredAt: Instant = Instant.EPOCH,
     @Column(name = "last_heartbeat_at")
     var lastHeartbeatAt: Instant? = null,
+    @Column(name = "credential_digest", unique = true)
+    var credentialDigest: String? = null,
 )

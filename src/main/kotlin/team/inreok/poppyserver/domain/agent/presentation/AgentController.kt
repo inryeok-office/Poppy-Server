@@ -154,6 +154,7 @@ data class AgentRegistrationResponse(
     val agentId: UUID,
     val registeredAt: LocalDateTime,
     val acceptedRobotIds: List<UUID>,
+    val agentToken: String,
 )
 
 data class AgentHeartbeatResponse(
@@ -199,6 +200,7 @@ private fun AgentRegistrationResult.toResponse(): AgentRegistrationResponse = Ag
     agentId = agent.id,
     registeredAt = agent.registeredAt.toUtcLocalDateTime(),
     acceptedRobotIds = acceptedRobotIds,
+    agentToken = agentToken,
 )
 
 private fun AgentExecutionDelivery.toResponse(): AgentExecutionResponse = AgentExecutionResponse(
