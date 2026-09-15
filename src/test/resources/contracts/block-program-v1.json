@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "id": "start-1",
+      "type": "START",
+      "parameters": {}
+    },
+    {
+      "id": "move-1",
+      "type": "MOVE_FORWARD",
+      "parameters": {
+        "distanceMeters": 1.0
+      }
+    },
+    {
+      "id": "repeat-1",
+      "type": "REPEAT",
+      "parameters": {
+        "count": 2
+      },
+      "children": [
+        {
+          "id": "turn-1",
+          "type": "TURN_LEFT",
+          "parameters": {
+            "angleDegrees": 90.0
+          }
+        },
+        {
+          "id": "wait-1",
+          "type": "WAIT",
+          "parameters": {
+            "durationSeconds": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "end-1",
+      "type": "END",
+      "parameters": {}
+    }
+  ]
+}
