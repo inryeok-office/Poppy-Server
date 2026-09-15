@@ -12,3 +12,7 @@ poppy:
     offline-recovery-enabled: ${POPPY_EXECUTION_OFFLINE_RECOVERY_ENABLED:true}
     offline-recovery-interval-milliseconds: ${POPPY_EXECUTION_OFFLINE_RECOVERY_INTERVAL_MILLISECONDS:30000}
     offline-recovery-batch-size: ${POPPY_EXECUTION_OFFLINE_RECOVERY_BATCH_SIZE:100}
+  session:
+    inactivity-timeout: ${POPPY_SESSION_INACTIVITY_TIMEOUT:PT1H}
+    expiration-enabled: ${POPPY_SESSION_EXPIRATION_ENABLED:true}
+    expiration-scan-interval-milliseconds: ${POPPY_SESSION_EXPIRATION_SCAN_INTERVAL_MILLISECONDS:60000}

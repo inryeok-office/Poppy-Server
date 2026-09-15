@@ -1,6 +1,7 @@
 package team.inreok.poppyserver.domain.session.infrastructure
 
 import jakarta.persistence.EntityManager
+import java.time.Instant
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Repository
@@ -36,6 +37,8 @@ class SessionPersistenceAdapter(
         currentBlockVersion = session.currentBlockVersion
         createdAt = session.createdAt
         sessionTokenDigest = session.sessionTokenDigest
+        lastActivityAt = session.lastActivityAt
+        expiredAt = session.expiredAt
     }
 
     private fun SessionEntity.toDomain(): Session = Session.restore(
@@ -43,5 +46,10 @@ class SessionPersistenceAdapter(
         currentBlockVersion = currentBlockVersion,
         createdAt = createdAt,
         sessionTokenDigest = sessionTokenDigest,
+        lastActivityAt = lastActivityAt,
+        expiredAt = expiredAt,
     )
+
+    override fun findInactiveIdsBefore(cutoff: Instant): List<UUID> =
+        sessionJpaRepository.findInactiveIdsBefore(cutoff)
 }
