@@ -20,6 +20,7 @@ class ExecutionRequestService(
     private val blockRevisionRepository: BlockRevisionRepository,
     private val simulationPassRepository: SimulationPassRepository,
     private val executionRepository: ExecutionRepository,
+    private val executionStatusEventPublisher: ExecutionStatusEventPublisher? = null,
 ) {
     @Transactional
     fun requestExecution(sessionId: UUID, blockVersion: Long): ExecutionRequestResult {
@@ -42,6 +43,13 @@ class ExecutionRequestService(
         }
 
         val execution = executionRepository.save(Execution.create(sessionId, blockVersion))
+        executionStatusEventPublisher?.publish(
+            ExecutionStatusChangedEvent(
+                executionId = execution.id,
+                sessionId = sessionId,
+                status = execution.status,
+            ),
+        )
         return ExecutionRequestResult(
             executionId = execution.id,
             sessionId = requireNotNull(execution.sessionId),

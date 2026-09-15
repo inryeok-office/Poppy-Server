@@ -19,6 +19,7 @@ class ExecutionCancellationService(
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
     private val sessionAccessVerifier: SessionAccessVerifier,
+    private val executionStatusEventPublisher: ExecutionStatusEventPublisher? = null,
 ) {
     @Transactional
     fun cancelForSession(executionId: UUID, sessionToken: String?): ExecutionCancellationResult {
@@ -49,6 +50,7 @@ class ExecutionCancellationService(
     private fun cancelQueued(execution: Execution): ExecutionCancellationResult {
         execution.cancel()
         executionRepository.save(execution)
+        publishStatusChanged(execution)
         return execution.toCancellationResult()
     }
 
@@ -65,7 +67,16 @@ class ExecutionCancellationService(
         robot.releaseExecution(execution.id)
         executionRepository.save(execution)
         robotRepository.save(robot)
+        publishStatusChanged(execution)
         return execution.toCancellationResult()
+    }
+
+    private fun publishStatusChanged(execution: Execution) {
+        execution.sessionId?.let { sessionId ->
+            executionStatusEventPublisher?.publish(
+                ExecutionStatusChangedEvent(execution.id, sessionId, execution.status),
+            )
+        }
     }
 
     private fun Execution.toCancellationResult(): ExecutionCancellationResult =
