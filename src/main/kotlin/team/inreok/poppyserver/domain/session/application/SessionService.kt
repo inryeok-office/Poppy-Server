@@ -16,15 +16,23 @@ class SessionService(
     private val sessionRepository: SessionRepository,
     private val blockRevisionRepository: BlockRevisionRepository,
     private val sessionAccessVerifier: SessionAccessVerifier,
+    private val recoveryCodeIssuer: RecoveryCodeIssuer,
 ) {
     @Transactional
     fun createSession(): SessionCreationResult {
         val issuedToken = sessionAccessVerifier.issue()
-        val session = sessionRepository.save(Session.createWithToken(issuedToken.digest))
+        val issuedRecoveryCode = recoveryCodeIssuer.issue()
+        val session = sessionRepository.save(
+            Session.createWithToken(
+                sessionTokenDigest = issuedToken.digest,
+                recoveryCodeDigest = issuedRecoveryCode.digest,
+            ),
+        )
         return SessionCreationResult(
             sessionId = session.id,
             currentBlockVersion = session.currentBlockVersion,
             sessionToken = issuedToken.raw,
+            recoveryCode = issuedRecoveryCode.raw,
         )
     }
 
@@ -52,6 +60,7 @@ data class SessionCreationResult(
     val sessionId: UUID,
     val currentBlockVersion: Long,
     val sessionToken: String,
+    val recoveryCode: String,
 )
 
 data class BlockRevisionAppendResult(

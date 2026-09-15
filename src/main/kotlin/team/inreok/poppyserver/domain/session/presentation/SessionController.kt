@@ -17,6 +17,8 @@ import team.inreok.poppyserver.domain.session.application.BlockRevisionAppendRes
 import team.inreok.poppyserver.domain.session.application.SessionCreationResult
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SessionAccessVerifier
+import team.inreok.poppyserver.domain.session.application.SessionRecoveryService
+import team.inreok.poppyserver.domain.session.application.SessionRecoveryResult
 import team.inreok.poppyserver.global.response.ApiResponse
 
 @RestController
@@ -25,10 +27,19 @@ import team.inreok.poppyserver.global.response.ApiResponse
 class SessionController(
     private val sessionService: SessionService,
     private val sessionAccessVerifier: SessionAccessVerifier,
+    private val sessionRecoveryService: SessionRecoveryService,
 ) {
     @PostMapping
     fun createSession(): ResponseEntity<ApiResponse<SessionResponse>> = ResponseEntity.status(HttpStatus.CREATED).body(
         ApiResponse.success(sessionService.createSession().toResponse()),
+    )
+
+    @PostMapping("/restore")
+    fun restoreSession(
+        @Valid @RequestBody request: SessionRestoreRequest,
+        httpRequest: jakarta.servlet.http.HttpServletRequest,
+    ): ResponseEntity<ApiResponse<SessionRecoveryResponse>> = ResponseEntity.ok(
+        ApiResponse.success(sessionRecoveryService.restore(request.recoveryCode, httpRequest.remoteAddr).toResponse()),
     )
 
     @PostMapping("/{sessionId}/block-revisions")
@@ -54,6 +65,18 @@ data class SessionResponse(
     val sessionId: UUID,
     val sessionToken: String,
     val currentBlockVersion: Long,
+    val recoveryCode: String,
+)
+
+data class SessionRestoreRequest(
+    @field:NotNull val recoveryCode: String?,
+)
+
+data class SessionRecoveryResponse(
+    val sessionId: UUID,
+    val sessionToken: String,
+    val recoveryCode: String,
+    val currentBlockVersion: Long,
 )
 
 data class BlockRevisionResponse(
@@ -64,6 +87,14 @@ data class BlockRevisionResponse(
 private fun SessionCreationResult.toResponse(): SessionResponse = SessionResponse(
     sessionId = sessionId,
     sessionToken = sessionToken,
+    currentBlockVersion = currentBlockVersion,
+    recoveryCode = recoveryCode,
+)
+
+private fun SessionRecoveryResult.toResponse(): SessionRecoveryResponse = SessionRecoveryResponse(
+    sessionId = sessionId,
+    sessionToken = sessionToken,
+    recoveryCode = recoveryCode,
     currentBlockVersion = currentBlockVersion,
 )
 

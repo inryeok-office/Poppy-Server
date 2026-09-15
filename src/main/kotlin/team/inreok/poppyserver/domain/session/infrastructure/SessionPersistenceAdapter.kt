@@ -32,11 +32,18 @@ class SessionPersistenceAdapter(
     override fun findByTokenDigest(tokenDigest: String): Session? =
         sessionJpaRepository.findBySessionTokenDigest(tokenDigest)?.toDomain()
 
+    override fun findByRecoveryCodeDigest(recoveryCodeDigest: String): Session? =
+        sessionJpaRepository.findByRecoveryCodeDigest(recoveryCodeDigest)?.toDomain()
+
+    override fun findByRecoveryCodeDigestForUpdate(recoveryCodeDigest: String): Session? =
+        sessionJpaRepository.findByRecoveryCodeDigestForUpdate(recoveryCodeDigest)?.toDomain()
+
     private fun SessionEntity.updateFrom(session: Session) {
         id = session.id
         currentBlockVersion = session.currentBlockVersion
         createdAt = session.createdAt
         sessionTokenDigest = session.sessionTokenDigest
+        recoveryCodeDigest = session.recoveryCodeDigest
         lastActivityAt = session.lastActivityAt
         expiredAt = session.expiredAt
     }
@@ -46,6 +53,7 @@ class SessionPersistenceAdapter(
         currentBlockVersion = currentBlockVersion,
         createdAt = createdAt,
         sessionTokenDigest = sessionTokenDigest,
+        recoveryCodeDigest = recoveryCodeDigest,
         lastActivityAt = lastActivityAt,
         expiredAt = expiredAt,
     )

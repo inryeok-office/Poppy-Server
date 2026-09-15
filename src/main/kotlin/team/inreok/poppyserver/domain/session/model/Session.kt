@@ -7,10 +7,17 @@ class Session private constructor(
     val id: UUID,
     currentBlockVersionValue: Long,
     val createdAt: Instant,
-    val sessionTokenDigest: String?,
+    sessionTokenDigestValue: String?,
+    recoveryCodeDigestValue: String?,
     lastActivityAtValue: Instant,
     var expiredAt: Instant?,
 ) {
+
+    var sessionTokenDigest: String? = sessionTokenDigestValue
+        private set
+
+    var recoveryCodeDigest: String? = recoveryCodeDigestValue
+        private set
 
     var currentBlockVersion: Long = currentBlockVersionValue
         private set
@@ -40,16 +47,22 @@ class Session private constructor(
             id = UUID.randomUUID(),
             currentBlockVersionValue = 0,
             createdAt = createdAt,
-            sessionTokenDigest = null,
+            sessionTokenDigestValue = null,
+            recoveryCodeDigestValue = null,
             lastActivityAtValue = createdAt,
             expiredAt = null,
         )
 
-        fun createWithToken(sessionTokenDigest: String, createdAt: Instant = Instant.now()): Session = Session(
+        fun createWithToken(
+            sessionTokenDigest: String,
+            recoveryCodeDigest: String? = null,
+            createdAt: Instant = Instant.now(),
+        ): Session = Session(
             id = UUID.randomUUID(),
             currentBlockVersionValue = 0,
             createdAt = createdAt,
-            sessionTokenDigest = sessionTokenDigest,
+            sessionTokenDigestValue = sessionTokenDigest,
+            recoveryCodeDigestValue = recoveryCodeDigest,
             lastActivityAtValue = createdAt,
             expiredAt = null,
         )
@@ -59,15 +72,26 @@ class Session private constructor(
             currentBlockVersion: Long,
             createdAt: Instant,
             sessionTokenDigest: String? = null,
+            recoveryCodeDigest: String? = null,
             lastActivityAt: Instant? = null,
             expiredAt: Instant? = null,
         ): Session = Session(
             id = id,
             currentBlockVersionValue = currentBlockVersion,
             createdAt = createdAt,
-            sessionTokenDigest = sessionTokenDigest,
+            sessionTokenDigestValue = sessionTokenDigest,
+            recoveryCodeDigestValue = recoveryCodeDigest,
             lastActivityAtValue = lastActivityAt ?: createdAt,
             expiredAt = expiredAt,
         )
+    }
+
+    fun rotateSessionToken(newDigest: String) {
+        sessionTokenDigest = newDigest
+    }
+
+    fun rotateCredentials(newSessionTokenDigest: String, newRecoveryCodeDigest: String) {
+        sessionTokenDigest = newSessionTokenDigest
+        recoveryCodeDigest = newRecoveryCodeDigest
     }
 }
