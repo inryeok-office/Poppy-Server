@@ -4,13 +4,11 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import team.inreok.poppyserver.global.security.AgentPrincipalResolver
 
 @Service
-@ConditionalOnBean(AgentRepository::class)
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class AgentCredentialService(
     private val agentRepository: AgentRepository,
