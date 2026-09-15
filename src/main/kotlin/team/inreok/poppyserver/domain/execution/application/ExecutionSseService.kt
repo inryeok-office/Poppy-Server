@@ -5,6 +5,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArraySet
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.MediaType
@@ -37,26 +38,46 @@ class ExecutionSseService(
         emitter.onTimeout { remove(sessionId, emitter) }
         emitter.onError { remove(sessionId, emitter) }
 
-        executionStatusQueryRepository.findActiveExecutions()
-            .asSequence()
-            .filter { it.sessionId == sessionId }
-            .maxWithOrNull(compareBy<ExecutionStatusView> { it.queuedAt ?: Instant.MIN }.thenBy { it.executionId })
-            ?.let { view ->
-                if (!send(sessionId, emitter, view)) {
-                    remove(sessionId, emitter)
+        try {
+            executionStatusQueryRepository.findActiveExecutionsBySessionId(sessionId)
+                .maxWithOrNull(compareBy<ExecutionStatusView> { it.queuedAt ?: Instant.MIN }.thenBy { it.executionId })
+                ?.let { view ->
+                    if (!send(sessionId, emitter, view)) {
+                        remove(sessionId, emitter)
+                    }
                 }
-            }
+        } catch (exception: RuntimeException) {
+            remove(sessionId, emitter)
+            emitter.completeWithError(exception)
+            throw exception
+        }
         return emitter
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun publish(event: ExecutionStatusChangedEvent) {
-        val sessionEmitters = emitters[event.sessionId] ?: return
-        val view = executionStatusQueryRepository.findById(event.executionId) ?: return
-        sessionEmitters.toList().forEach { emitter ->
-            if (!send(event.sessionId, emitter, view)) {
-                remove(event.sessionId, emitter)
+        try {
+            val views = if (event.status == ExecutionStatus.QUEUED ||
+                event.status == ExecutionStatus.ASSIGNED ||
+                event.status == ExecutionStatus.CANCELLED
+            ) {
+                (executionStatusQueryRepository.findActiveExecutions() +
+                    listOfNotNull(executionStatusQueryRepository.findById(event.executionId)))
+                    .distinctBy { it.executionId }
+            } else {
+                listOfNotNull(executionStatusQueryRepository.findById(event.executionId))
             }
+            views.forEach { view ->
+                val sessionId = view.sessionId ?: return@forEach
+                val sessionEmitters = emitters[sessionId] ?: return@forEach
+                sessionEmitters.toList().forEach { emitter ->
+                    if (!send(sessionId, emitter, view)) {
+                        remove(sessionId, emitter)
+                    }
+                }
+            }
+        } catch (exception: RuntimeException) {
+            logger.warn("Failed to publish execution status SSE event", exception)
         }
     }
 
@@ -84,6 +105,7 @@ class ExecutionSseService(
 
     companion object {
         const val EVENT_NAME = "execution-status"
+        private val logger = LoggerFactory.getLogger(ExecutionSseService::class.java)
     }
 }
 

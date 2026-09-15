@@ -23,6 +23,15 @@ class ExecutionStatusQueryPersistenceAdapter(
     ).singleOrNull()
 
     @Transactional(readOnly = true)
+    override fun findActiveExecutionsBySessionId(sessionId: UUID): List<ExecutionStatusView> = query(
+        whereClause = "where execution.session_id = :sessionId and execution.status in (:activeStatuses)",
+        parameters = mapOf(
+            "sessionId" to sessionId,
+            "activeStatuses" to ACTIVE_STATUSES.map(Enum<*>::name),
+        ),
+    )
+
+    @Transactional(readOnly = true)
     override fun findActiveExecutions(): List<ExecutionStatusView> = query(
         whereClause = "where execution.status in (:activeStatuses)",
         parameters = mapOf("activeStatuses" to ACTIVE_STATUSES.map(Enum<*>::name)),
