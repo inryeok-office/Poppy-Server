@@ -40,6 +40,7 @@ class SessionAccessVerifier(
         if (authenticatedSession.id != sessionId) {
             throw ApplicationException(ErrorCode.EXECUTION_ACCESS_DENIED)
         }
+        sessionActivityService.touch(authenticatedSession.id)
     }
 
     private fun authenticate(rawToken: String?): Session {
@@ -53,7 +54,6 @@ class SessionAccessVerifier(
             throw ApplicationException(ErrorCode.SESSION_TOKEN_INVALID)
         }
         ensureActive(session)
-        sessionActivityService.touch(session.id)
         return session
     }
 

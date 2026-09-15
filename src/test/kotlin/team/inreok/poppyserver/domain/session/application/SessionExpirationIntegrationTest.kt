@@ -77,6 +77,19 @@ class SessionExpirationIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `cross session ownership failure does not update authenticated session activity`() {
+        val owner = sessionService.createSession()
+        val other = sessionService.createSession()
+        val before = sessionRepository.findById(other.sessionId)!!.lastActivityAt
+
+        assertFailsWith<ApplicationException> {
+            sessionAccessVerifier.verifyOwnership(owner.sessionId, other.sessionToken)
+        }
+
+        assertEquals(before, sessionRepository.findById(other.sessionId)!!.lastActivityAt)
+    }
+
+    @Test
     fun `inactive session expires and blocks further session access`() {
         val now = Instant.parse("2026-09-15T00:00:00Z")
         val issued = sessionAccessVerifier.issue()
