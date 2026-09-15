@@ -24,6 +24,7 @@ import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.model.BlockRevision
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -68,8 +69,8 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `Block Revision은 Session별로 1부터 증가하고 JSON snapshot을 보존한다`() {
         val session = sessionService.createSession()
-        val firstDocument = "{\"blocks\": [{\"type\": \"MOVE\"}]}"
-        val secondDocument = "{\"blocks\": [], \"metadata\": {\"opaque\": true}}"
+        val firstDocument = validBlockProgram("first")
+        val secondDocument = validBlockProgram("second")
 
         val first = sessionService.appendBlockRevision(session.sessionId, firstDocument)
         val second = sessionService.appendBlockRevision(session.sessionId, secondDocument)
@@ -86,14 +87,17 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
         val firstSession = sessionService.createSession()
         val secondSession = sessionService.createSession()
 
-        sessionService.appendBlockRevision(firstSession.sessionId, "{\"value\":1}")
-        sessionService.appendBlockRevision(firstSession.sessionId, "{\"value\":2}")
-        sessionService.appendBlockRevision(secondSession.sessionId, "{\"value\":9}")
+        val firstDocument = validBlockProgram("first")
+        val secondDocument = validBlockProgram("second")
+        val thirdDocument = validBlockProgram("third")
+        sessionService.appendBlockRevision(firstSession.sessionId, firstDocument)
+        sessionService.appendBlockRevision(firstSession.sessionId, secondDocument)
+        sessionService.appendBlockRevision(secondSession.sessionId, thirdDocument)
 
-        assertEquals("{\"value\": 1}", blockRevisionRepository.findById(firstSession.sessionId, 1)?.document)
+        assertEquals(firstDocument, blockRevisionRepository.findById(firstSession.sessionId, 1)?.document)
         assertEquals(2, sessionRepository.findById(firstSession.sessionId)?.currentBlockVersion)
         assertEquals(1, sessionRepository.findById(secondSession.sessionId)?.currentBlockVersion)
-        assertEquals("{\"value\": 9}", blockRevisionRepository.findById(secondSession.sessionId, 1)?.document)
+        assertEquals(thirdDocument, blockRevisionRepository.findById(secondSession.sessionId, 1)?.document)
     }
 
     @Test
@@ -111,12 +115,13 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `Block Revision HTTP API는 opaque JSON을 저장하고 version을 반환한다`() {
         val session = sessionService.createSession()
+        val document = validBlockProgram("http")
 
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/block-revisions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Session-Token", session.sessionToken)
-                .content("{\"document\":{\"blocks\":[{\"custom\":42}]}}"),
+                .content("{\"document\":$document}"),
         )
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.success").value(true))
@@ -124,10 +129,7 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.data.blockVersion").value(1))
             .andExpect(jsonPath("$.error").value(null))
 
-        assertEquals(
-            "{\"blocks\": [{\"custom\": 42}]}",
-            blockRevisionRepository.findById(session.sessionId, 1)?.document,
-        )
+        assertEquals(document, blockRevisionRepository.findById(session.sessionId, 1)?.document)
     }
 
     @Test
@@ -141,6 +143,18 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error.code").value("COMMON_400"))
+
+        mockMvc.perform(
+            post("/api/v1/sessions/${session.sessionId}/block-revisions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
+                .content("{\"document\":{\"schemaVersion\":1,\"blocks\":[{\"id\":\"start\",\"type\":\"START\",\"parameters\":{}},{\"id\":\"start-2\",\"type\":\"START\",\"parameters\":{}},{\"id\":\"end\",\"type\":\"END\",\"parameters\":{}}]}}"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("BLOCK_PROGRAM_INVALID"))
+            .andExpect(jsonPath("$.error.fieldErrors[0].field").value("blocks[1]"))
+        assertEquals(0, sessionRepository.findById(session.sessionId)?.currentBlockVersion)
+        assertNull(blockRevisionRepository.findById(session.sessionId, 1))
 
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/block-revisions")
@@ -163,7 +177,7 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
                 executor.submit<Long> {
                     ready.countDown()
                     assertTrue(start.await(10, TimeUnit.SECONDS))
-                    sessionService.appendBlockRevision(session.sessionId, "{\"index\":$index}").blockVersion
+                    sessionService.appendBlockRevision(session.sessionId, validBlockProgram(index.toString())).blockVersion
                 }
             }
             assertTrue(ready.await(10, TimeUnit.SECONDS))
@@ -199,20 +213,22 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `같은 Session과 version의 Revision은 immutable하게 거부된다`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"value\":1}")
+        val document = validBlockProgram("immutable")
+        sessionService.appendBlockRevision(session.sessionId, document)
 
         assertFailsWith<DataAccessException> {
             blockRevisionRepository.save(
                 BlockRevision.create(session.sessionId, 1, "{\"value\":2}"),
             )
         }
-        assertEquals("{\"value\": 1}", blockRevisionRepository.findById(session.sessionId, 1)?.document)
+        assertEquals(document, blockRevisionRepository.findById(session.sessionId, 1)?.document)
     }
 
     @Test
     fun `DB는 Session과 version 조합을 unique하게 보장한다`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"value\":1}")
+        val document = validBlockProgram("unique")
+        sessionService.appendBlockRevision(session.sessionId, document)
         val transactionTemplate = TransactionTemplate(transactionManager)
 
         assertFailsWith<DataAccessException> {
@@ -229,7 +245,7 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
                 )
             }
         }
-        assertEquals("{\"value\": 1}", blockRevisionRepository.findById(session.sessionId, 1)?.document)
+        assertEquals(document, blockRevisionRepository.findById(session.sessionId, 1)?.document)
     }
 
     companion object {

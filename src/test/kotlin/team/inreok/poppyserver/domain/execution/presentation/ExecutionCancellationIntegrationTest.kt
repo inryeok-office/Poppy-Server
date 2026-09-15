@@ -31,6 +31,7 @@ import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 import kotlin.test.assertEquals
@@ -241,7 +242,7 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
 
     private fun saveExecution(status: ExecutionStatus): Execution {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
         return inTransaction {
             val execution = Execution.create(session.sessionId, 1)
             when (status) {
@@ -272,7 +273,7 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
         currentExecutionId: UUID? = null,
     ): AssignedFixture {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
         val execution = Execution.create(session.sessionId, 1)
         val robot = saveRobot(currentExecutionId = currentExecutionId ?: execution.id)
         inTransaction {

@@ -2,11 +2,13 @@ package team.inreok.poppyserver.domain.block.application
 
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
+import org.springframework.stereotype.Component
 import team.inreok.poppyserver.domain.block.model.BlockInstance
 import team.inreok.poppyserver.domain.block.model.BlockParameters
 import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.block.model.BlockType
 
+@Component
 class BlockProgramParser(
     private val objectMapper: ObjectMapper,
 ) {

@@ -20,6 +20,7 @@ import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -90,7 +91,7 @@ class SessionTokenIntegrationTest : PostgresIntegrationTest() {
             post("/api/v1/sessions/${session.sessionId}/block-revisions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Session-Token", session.sessionToken)
-                .content("{\"document\":{}}"),
+                .content("{\"document\":${validBlockProgram()}}"),
         )
             .andExpect(status().isCreated)
 
@@ -139,7 +140,7 @@ class SessionTokenIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `Session token protects Simulation Pass and Execution Request`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
 
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
@@ -209,7 +210,7 @@ class SessionTokenIntegrationTest : PostgresIntegrationTest() {
     }
 
     private fun preparedSession() = sessionService.createSession().also { session ->
-        sessionService.appendBlockRevision(session.sessionId, "{}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
         val pass = mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
                 .contentType(MediaType.APPLICATION_JSON)

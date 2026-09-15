@@ -25,6 +25,7 @@ import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -74,7 +75,7 @@ class SessionRecoveryIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `valid recovery keeps Session data and rotates both credentials`() {
         val created = sessionService.createSession()
-        sessionService.appendBlockRevision(created.sessionId, "{}")
+        sessionService.appendBlockRevision(created.sessionId, validBlockProgram())
 
         val result = mockMvc.perform(
             post("/api/v1/sessions/restore")

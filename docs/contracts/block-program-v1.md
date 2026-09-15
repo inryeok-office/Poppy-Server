@@ -86,4 +86,10 @@
 }
 ```
 
-이번 버전은 Block Revision validation 연결, `/api/v1/blocks`, compiler, Command Protocol, capability matching, Agent 연동을 포함하지 않습니다.
+Block Revision 저장 시에는 이 문서의 parser 규칙과 다음 semantic 규칙을 함께 검증합니다.
+
+- START와 END는 각각 정확히 하나이며, START는 첫 top-level block, END는 마지막 top-level block입니다.
+- BlockInstance id는 children을 포함한 전체 프로그램에서 unique해야 합니다.
+- REPEAT는 비어 있을 수 없고 nested REPEAT 또는 START/END child를 포함할 수 없습니다.
+
+안전 min/max, PRESET whitelist, 전체 실행량 제한은 아직 확정되지 않았으므로 검증하지 않습니다. 이번 버전은 `/api/v1/blocks`, compiler, Command Protocol, capability matching, Agent 연동을 포함하지 않습니다.
