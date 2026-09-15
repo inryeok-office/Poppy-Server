@@ -11,11 +11,65 @@ class BlockProgramSerializer(
     private val objectMapper: ObjectMapper,
 ) {
     fun serialize(program: BlockProgram): String {
+        validateProgram(program)
         val root = objectMapper.createObjectNode()
         root.put("schemaVersion", program.schemaVersion)
         val blocks = root.putArray("blocks")
         program.blocks.forEach { blocks.add(writeBlock(it)) }
         return objectMapper.writeValueAsString(root)
+    }
+
+    private fun validateProgram(program: BlockProgram) {
+        if (program.schemaVersion != BlockProgramParser.SUPPORTED_SCHEMA_VERSION) {
+            throw BlockProgramParseException(
+                BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION,
+                "schemaVersion ${program.schemaVersion} is not supported",
+            )
+        }
+        program.blocks.forEach(::validateBlock)
+    }
+
+    private fun validateBlock(block: BlockInstance) {
+        if (block.id.isBlank()) {
+            throw BlockProgramParseException(
+                BlockProgramParseErrorCode.INVALID_FIELD,
+                "block id must be a non-blank string",
+            )
+        }
+        validateParameters(block.type, block.parameters)
+        if (block.type == BlockType.REPEAT) {
+            val children = block.children
+                ?: throw BlockProgramParseException(
+                    BlockProgramParseErrorCode.INVALID_FIELD,
+                    "REPEAT children must be present",
+                )
+            children.forEach(::validateBlock)
+        } else if (block.children != null) {
+            throw BlockProgramParseException(
+                BlockProgramParseErrorCode.INVALID_FIELD,
+                "non-REPEAT block cannot have children",
+            )
+        }
+    }
+
+    private fun validateParameters(type: BlockType, parameters: BlockParameters) {
+        val valid = when (type) {
+            BlockType.WAIT -> parameters is BlockParameters.DurationSeconds && parameters.value.isFinite()
+            BlockType.REPEAT -> parameters is BlockParameters.Count
+            BlockType.MOVE_FORWARD, BlockType.MOVE_BACKWARD ->
+                parameters is BlockParameters.DistanceMeters && parameters.value.isFinite()
+            BlockType.TURN_LEFT, BlockType.TURN_RIGHT ->
+                parameters is BlockParameters.AngleDegrees && parameters.value.isFinite()
+            BlockType.PRESET -> parameters is BlockParameters.PresetCode
+            BlockType.START, BlockType.END, BlockType.STOP, BlockType.SIT, BlockType.STAND ->
+                parameters == BlockParameters.None
+        }
+        if (!valid) {
+            throw BlockProgramParseException(
+                BlockProgramParseErrorCode.INVALID_PARAMETER,
+                "${type.name} parameters do not match the block type",
+            )
+        }
     }
 
     private fun writeBlock(block: BlockInstance): ObjectNode = objectMapper.createObjectNode().apply {

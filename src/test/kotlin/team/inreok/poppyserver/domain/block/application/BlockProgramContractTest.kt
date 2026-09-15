@@ -1,6 +1,7 @@
 package team.inreok.poppyserver.domain.block.application
 
 import org.junit.jupiter.api.Test
+import team.inreok.poppyserver.domain.block.model.BlockInstance
 import team.inreok.poppyserver.domain.block.model.BlockParameters
 import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.block.model.BlockType
@@ -74,6 +75,55 @@ class BlockProgramContractTest {
     }
 
     @Test
+    fun `serializer rejects unsupported schema version`() {
+        val program = BlockProgram(schemaVersion = 2, blocks = emptyList())
+
+        assertCodeFromSerializer(program, BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION)
+    }
+
+    @Test
+    fun `serializer rejects blank block id`() {
+        val program = BlockProgram(
+            schemaVersion = 1,
+            blocks = listOf(BlockInstance(" ", BlockType.STOP, BlockParameters.None)),
+        )
+
+        assertCodeFromSerializer(program, BlockProgramParseErrorCode.INVALID_FIELD)
+    }
+
+    @Test
+    fun `serializer rejects repeat without children`() {
+        val program = BlockProgram(
+            schemaVersion = 1,
+            blocks = listOf(BlockInstance("repeat", BlockType.REPEAT, BlockParameters.Count(2))),
+        )
+
+        assertCodeFromSerializer(program, BlockProgramParseErrorCode.INVALID_FIELD)
+    }
+
+    @Test
+    fun `serializer rejects parameters that do not match block type`() {
+        val program = BlockProgram(
+            schemaVersion = 1,
+            blocks = listOf(BlockInstance("stop", BlockType.STOP, BlockParameters.Count(1))),
+        )
+
+        assertCodeFromSerializer(program, BlockProgramParseErrorCode.INVALID_PARAMETER)
+    }
+
+    @Test
+    fun `serializer rejects non-finite number parameters`() {
+        val program = BlockProgram(
+            schemaVersion = 1,
+            blocks = listOf(
+                BlockInstance("wait", BlockType.WAIT, BlockParameters.DurationSeconds(Double.NaN)),
+            ),
+        )
+
+        assertCodeFromSerializer(program, BlockProgramParseErrorCode.INVALID_PARAMETER)
+    }
+
+    @Test
     fun `contract rejects malformed and unsupported roots`() {
         assertCode("{", BlockProgramParseErrorCode.MALFORMED_JSON)
         assertCode("[]", BlockProgramParseErrorCode.MALFORMED_JSON)
@@ -113,6 +163,11 @@ class BlockProgramContractTest {
 
     private fun assertCode(document: String, expected: BlockProgramParseErrorCode) {
         val exception = assertFailsWith<BlockProgramParseException> { parser.parse(document) }
+        assertEquals(expected, exception.code)
+    }
+
+    private fun assertCodeFromSerializer(program: BlockProgram, expected: BlockProgramParseErrorCode) {
+        val exception = assertFailsWith<BlockProgramParseException> { serializer.serialize(program) }
         assertEquals(expected, exception.code)
     }
 
