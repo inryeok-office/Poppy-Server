@@ -9,3 +9,6 @@ poppy:
   execution:
     queue-dispatch-enabled: ${POPPY_EXECUTION_QUEUE_DISPATCH_ENABLED:true}
     queue-dispatch-interval-milliseconds: ${POPPY_EXECUTION_QUEUE_DISPATCH_INTERVAL_MILLISECONDS:1000}
+    offline-recovery-enabled: ${POPPY_EXECUTION_OFFLINE_RECOVERY_ENABLED:true}
+    offline-recovery-interval-milliseconds: ${POPPY_EXECUTION_OFFLINE_RECOVERY_INTERVAL_MILLISECONDS:30000}
+    offline-recovery-batch-size: ${POPPY_EXECUTION_OFFLINE_RECOVERY_BATCH_SIZE:100}
