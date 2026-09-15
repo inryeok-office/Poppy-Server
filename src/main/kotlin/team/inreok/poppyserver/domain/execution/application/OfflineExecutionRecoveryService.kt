@@ -15,6 +15,7 @@ class OfflineExecutionRecoveryService(
     private val offlineExecutionRecoveryQueryRepository: OfflineExecutionRecoveryQueryRepository,
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
+    private val executionStatusEventPublisher: ExecutionStatusEventPublisher,
     @Value("\${poppy.execution.offline-recovery-batch-size:100}")
     private val batchSize: Int,
 ) {
@@ -55,6 +56,11 @@ class OfflineExecutionRecoveryService(
                 robot.releaseExecution(execution.id)
                 executionRepository.save(execution)
                 robotRepository.save(robot)
+                execution.sessionId?.let { sessionId ->
+                    executionStatusEventPublisher?.publish(
+                        ExecutionStatusChangedEvent(execution.id, sessionId, execution.status),
+                    )
+                }
                 true
             }
 

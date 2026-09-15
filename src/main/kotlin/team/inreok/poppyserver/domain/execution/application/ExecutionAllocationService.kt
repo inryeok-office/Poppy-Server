@@ -12,6 +12,7 @@ import team.inreok.poppyserver.domain.robot.application.RobotRepository
 class ExecutionAllocationService(
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
+    private val executionStatusEventPublisher: ExecutionStatusEventPublisher? = null,
 ) {
     @Transactional
     fun allocate(executionId: UUID): UUID? {
@@ -26,6 +27,15 @@ class ExecutionAllocationService(
         robot.assignExecution(execution.id)
         executionRepository.save(execution)
         robotRepository.save(robot)
+        execution.sessionId?.let { sessionId ->
+            executionStatusEventPublisher?.publish(
+                ExecutionStatusChangedEvent(
+                    executionId = execution.id,
+                    sessionId = sessionId,
+                    status = execution.status,
+                ),
+            )
+        }
         return robot.id
     }
 }

@@ -7,6 +7,8 @@ import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 interface ExecutionStatusQueryRepository {
     fun findById(executionId: UUID): ExecutionStatusView?
 
+    fun findActiveExecutionsBySessionId(sessionId: UUID): List<ExecutionStatusView>
+
     fun findActiveExecutions(): List<ExecutionStatusView>
 }
 

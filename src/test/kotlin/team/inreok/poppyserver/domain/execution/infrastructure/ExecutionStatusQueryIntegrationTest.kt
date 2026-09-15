@@ -136,6 +136,22 @@ class ExecutionStatusQueryIntegrationTest : PostgresIntegrationTest() {
         assertEquals(finishedAt, cancelledView.finishedAt)
     }
 
+    @Test
+    @Transactional
+    fun `active executions can be filtered by session in the database`() {
+        val firstSession = sessionRepository.save(Session.create(Instant.parse("2026-01-01T00:00:00Z")))
+        val secondSession = sessionRepository.save(Session.create(Instant.parse("2026-01-01T00:00:00Z")))
+        blockRevisionRepository.save(BlockRevision.create(firstSession.id, 1L, "{}"))
+        blockRevisionRepository.save(BlockRevision.create(secondSession.id, 1L, "{}"))
+        executionRepository.save(Execution.create(firstSession.id, 1))
+        executionRepository.save(Execution.create(secondSession.id, 1))
+
+        val result = executionStatusQueryRepository.findActiveExecutionsBySessionId(firstSession.id)
+
+        assertEquals(1, result.size)
+        assertEquals(firstSession.id, result.single().sessionId)
+    }
+
     private fun <T> inTransaction(block: () -> T): T = requireNotNull(
         TransactionTemplate(transactionManager).execute { block() },
     )
