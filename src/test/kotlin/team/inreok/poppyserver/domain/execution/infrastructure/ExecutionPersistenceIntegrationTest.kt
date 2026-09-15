@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.execution.infrastructure
 
+import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -49,6 +50,36 @@ class ExecutionPersistenceIntegrationTest : PostgresIntegrationTest() {
         executionRepository.save(execution)
 
         assertEquals(robotId, executionRepository.findById(execution.id)?.assignedRobotId)
+    }
+
+    @Test
+    @Transactional
+    fun `lifecycle timestamp를 저장하고 복원한다`() {
+        val startedAt = Instant.parse("2026-09-15T00:00:10.123456Z")
+        val finishedAt = Instant.parse("2026-09-15T00:00:11.654321Z")
+        val execution = Execution.create().apply {
+            assign()
+            start(startedAt)
+            complete(finishedAt)
+        }
+
+        executionRepository.save(execution)
+
+        val restored = executionRepository.findById(execution.id)
+        assertEquals(startedAt, restored?.startedAt)
+        assertEquals(finishedAt, restored?.finishedAt)
+    }
+
+    @Test
+    @Transactional
+    fun `legacy Execution은 lifecycle timestamp null로 복원된다`() {
+        val execution = Execution.restore(UUID.randomUUID(), ExecutionStatus.QUEUED)
+
+        executionRepository.save(execution)
+
+        val restored = executionRepository.findById(execution.id)
+        assertNull(restored?.startedAt)
+        assertNull(restored?.finishedAt)
     }
 
     @ParameterizedTest
