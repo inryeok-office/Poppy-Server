@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param
 interface SessionJpaRepository : JpaRepository<SessionEntity, UUID> {
     fun findBySessionTokenDigest(sessionTokenDigest: String): SessionEntity?
 
+    fun findByRecoveryCodeDigest(recoveryCodeDigest: String): SessionEntity?
+
     @Query("select session.id from SessionEntity session where session.expiredAt is null and session.lastActivityAt <= :cutoff")
     fun findInactiveIdsBefore(@Param("cutoff") cutoff: Instant): List<UUID>
 

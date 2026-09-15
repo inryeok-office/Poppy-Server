@@ -16,3 +16,5 @@ poppy:
     inactivity-timeout: ${POPPY_SESSION_INACTIVITY_TIMEOUT:PT1H}
     expiration-enabled: ${POPPY_SESSION_EXPIRATION_ENABLED:true}
     expiration-scan-interval-milliseconds: ${POPPY_SESSION_EXPIRATION_SCAN_INTERVAL_MILLISECONDS:60000}
+    recovery-attempt-window: ${POPPY_SESSION_RECOVERY_ATTEMPT_WINDOW:PT1M}
+    recovery-max-attempts: ${POPPY_SESSION_RECOVERY_MAX_ATTEMPTS:5}

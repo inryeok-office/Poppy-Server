@@ -20,12 +20,29 @@ class SessionService(
     @Transactional
     fun createSession(): SessionCreationResult {
         val issuedToken = sessionAccessVerifier.issue()
-        val session = sessionRepository.save(Session.createWithToken(issuedToken.digest))
+        val issuedRecoveryCode = issueRecoveryCode()
+        val session = sessionRepository.save(
+            Session.createWithToken(
+                sessionTokenDigest = issuedToken.digest,
+                recoveryCodeDigest = issuedRecoveryCode.digest,
+            ),
+        )
         return SessionCreationResult(
             sessionId = session.id,
             currentBlockVersion = session.currentBlockVersion,
             sessionToken = issuedToken.raw,
+            recoveryCode = issuedRecoveryCode.raw,
         )
+    }
+
+    private fun issueRecoveryCode(): IssuedRecoveryCode {
+        repeat(MAX_RECOVERY_CODE_ISSUE_ATTEMPTS) {
+            val candidate = RecoveryCodeGenerator.issue()
+            if (sessionRepository.findByRecoveryCodeDigest(candidate.digest) == null) {
+                return candidate
+            }
+        }
+        error("Unable to issue a unique recovery code")
     }
 
     @Transactional
@@ -52,9 +69,12 @@ data class SessionCreationResult(
     val sessionId: UUID,
     val currentBlockVersion: Long,
     val sessionToken: String,
+    val recoveryCode: String,
 )
 
 data class BlockRevisionAppendResult(
     val sessionId: UUID,
     val blockVersion: Long,
 )
+
+private const val MAX_RECOVERY_CODE_ISSUE_ATTEMPTS = 5
