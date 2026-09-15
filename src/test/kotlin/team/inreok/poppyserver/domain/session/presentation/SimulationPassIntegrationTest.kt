@@ -25,6 +25,7 @@ import team.inreok.poppyserver.domain.session.application.SimulationPassService
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -60,7 +61,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `current revision simulation pass is persisted with passedAt`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
 
         val result = simulationPassService.recordSimulationPass(session.sessionId, 1)
 
@@ -73,7 +74,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `duplicate pass is idempotent and keeps the original timestamp`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
 
         val first = simulationPassService.recordSimulationPass(session.sessionId, 1)
         val second = simulationPassService.recordSimulationPass(session.sessionId, 1)
@@ -97,7 +98,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `database primary key prevents duplicate pass rows`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
         simulationPassService.recordSimulationPass(session.sessionId, 1)
 
         assertFailsWith<DataAccessException> {
@@ -150,8 +151,8 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `stale and future versions are rejected`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":2}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-2"))
 
         val stale = assertFailsWith<ApplicationException> {
             simulationPassService.recordSimulationPass(session.sessionId, 1)
@@ -168,8 +169,8 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     fun `same version passes are independent across sessions`() {
         val firstSession = sessionService.createSession()
         val secondSession = sessionService.createSession()
-        sessionService.appendBlockRevision(firstSession.sessionId, "{\"session\":1}")
-        sessionService.appendBlockRevision(secondSession.sessionId, "{\"session\":2}")
+        sessionService.appendBlockRevision(firstSession.sessionId, validBlockProgram("first"))
+        sessionService.appendBlockRevision(secondSession.sessionId, validBlockProgram("second"))
 
         val first = simulationPassService.recordSimulationPass(firstSession.sessionId, 1)
         val second = simulationPassService.recordSimulationPass(secondSession.sessionId, 1)
@@ -189,10 +190,10 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `old pass remains after a new revision but is not current`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
         val firstPass = simulationPassService.recordSimulationPass(session.sessionId, 1)
 
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":2}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-2"))
 
         assertNotNull(simulationPassRepository.findById(session.sessionId, 1))
         assertNotEquals(sessionRepository.findById(session.sessionId)?.currentBlockVersion, firstPass.blockVersion)
@@ -203,7 +204,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `transaction rollback does not persist a simulation pass`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
 
         assertFailsWith<IllegalStateException> {
             TransactionTemplate(transactionManager).executeWithoutResult {
@@ -219,7 +220,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `concurrent pass requests create one immutable row`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
         val ready = CountDownLatch(2)
         val start = CountDownLatch(1)
         val executor = Executors.newFixedThreadPool(2)
@@ -257,7 +258,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `pass and revision append are serialized by the session lock`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"version\":1}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-1"))
         val ready = CountDownLatch(2)
         val start = CountDownLatch(1)
         val executor = Executors.newFixedThreadPool(2)
@@ -272,7 +273,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
                 ready.countDown()
                 assertTrue(start.await(10, TimeUnit.SECONDS))
                 runCatching {
-                    sessionService.appendBlockRevision(session.sessionId, "{\"version\":2}").blockVersion
+                    sessionService.appendBlockRevision(session.sessionId, validBlockProgram("version-2")).blockVersion
                 }
             }
             assertTrue(ready.await(10, TimeUnit.SECONDS))
@@ -291,7 +292,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `simulation pass HTTP API returns envelope and preserves duplicate`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
 
         val first = mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")
@@ -327,7 +328,7 @@ class SimulationPassIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `simulation pass HTTP validation and unknown session use global errors`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
 
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/simulation-passes")

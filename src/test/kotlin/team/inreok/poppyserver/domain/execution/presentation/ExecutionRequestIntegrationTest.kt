@@ -28,6 +28,7 @@ import team.inreok.poppyserver.domain.session.application.SimulationPassService
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -78,7 +79,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `missing simulation pass is rejected`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
 
         val exception = assertFailsWith<ApplicationException> {
             executionRequestService.requestExecution(session.sessionId, 1)
@@ -90,7 +91,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `a pass for an older revision cannot create an execution for the changed program`() {
         val session = preparedSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[{\"version\":2}]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("changed"))
 
         val stale = assertFailsWith<ApplicationException> {
             executionRequestService.requestExecution(session.sessionId, 1)
@@ -117,8 +118,8 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         }
         assertEquals(ErrorCode.SIMULATION_BLOCK_VERSION_INVALID, invalid.errorCode)
 
-        sessionService.appendBlockRevision(fresh.sessionId, "{\"version\":1}")
-        sessionService.appendBlockRevision(fresh.sessionId, "{\"version\":2}")
+        sessionService.appendBlockRevision(fresh.sessionId, validBlockProgram("version-1"))
+        sessionService.appendBlockRevision(fresh.sessionId, validBlockProgram("version-2"))
         val stale = assertFailsWith<ApplicationException> {
             executionRequestService.requestExecution(fresh.sessionId, 1)
         }
@@ -300,7 +301,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
 
     private fun preparedSession(): SessionCreationResult {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
         simulationPassService.recordSimulationPass(session.sessionId, 1)
         return session
     }

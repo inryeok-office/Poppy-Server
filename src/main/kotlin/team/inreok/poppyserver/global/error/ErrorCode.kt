@@ -42,4 +42,5 @@ enum class ErrorCode(
     SIMULATION_BLOCK_VERSION_STALE(HttpStatus.CONFLICT, "SIMULATION_BLOCK_VERSION_STALE", "The simulation block version is not current"),
     SIMULATION_PASS_NOT_FOUND(HttpStatus.CONFLICT, "SIMULATION_PASS_NOT_FOUND", "The Simulation Pass was not found"),
     EXECUTION_SESSION_ACTIVE(HttpStatus.CONFLICT, "EXECUTION_SESSION_ACTIVE", "The Session already has an active Execution"),
+    BLOCK_PROGRAM_INVALID(HttpStatus.BAD_REQUEST, "BLOCK_PROGRAM_INVALID", "The Block Program is invalid"),
 }

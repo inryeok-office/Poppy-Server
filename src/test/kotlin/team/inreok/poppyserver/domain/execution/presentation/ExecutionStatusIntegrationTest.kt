@@ -17,6 +17,7 @@ import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -186,7 +187,7 @@ class ExecutionStatusIntegrationTest : PostgresIntegrationTest() {
     )
 
     private fun sessionWithRevision() = sessionService.createSession().also {
-        sessionService.appendBlockRevision(it.sessionId, "{\"blocks\":[]}")
+        sessionService.appendBlockRevision(it.sessionId, validBlockProgram())
     }
 }
 

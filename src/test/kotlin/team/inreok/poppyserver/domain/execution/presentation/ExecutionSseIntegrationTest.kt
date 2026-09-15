@@ -17,6 +17,7 @@ import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SimulationPassService
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -43,7 +44,7 @@ class ExecutionSseIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `execution status changes are sent to an existing session stream`() {
         val session = sessionService.createSession()
-        sessionService.appendBlockRevision(session.sessionId, "{}")
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
         simulationPassService.recordSimulationPass(session.sessionId, 1)
 
         val stream = mockMvc.perform(

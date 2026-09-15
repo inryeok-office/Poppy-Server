@@ -17,7 +17,15 @@ class GlobalExceptionHandler {
     fun handleApplicationException(exception: ApplicationException): ResponseEntity<ApiResponse<Nothing>> {
         val errorCode = exception.errorCode
         return ResponseEntity.status(errorCode.status).contentType(MediaType.APPLICATION_JSON)
-            .body(ApiResponse.failure(ApiErrorBody(code = errorCode.code, message = exception.message ?: errorCode.message)))
+            .body(
+                ApiResponse.failure(
+                    ApiErrorBody(
+                        code = errorCode.code,
+                        message = exception.message ?: errorCode.message,
+                        fieldErrors = exception.fieldErrors,
+                    ),
+                ),
+            )
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
