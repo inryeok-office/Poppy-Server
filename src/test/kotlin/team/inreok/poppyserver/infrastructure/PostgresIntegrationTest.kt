@@ -17,11 +17,11 @@ abstract class PostgresIntegrationTest {
     companion object {
         @DynamicPropertySource
         @JvmStatic
-    fun registerPostgresProperties(registry: DynamicPropertyRegistry) {
-        registry.add("spring.datasource.url", PostgresIntegrationContainer.postgres::getJdbcUrl)
-        registry.add("spring.datasource.username", PostgresIntegrationContainer.postgres::getUsername)
-        registry.add("spring.datasource.password", PostgresIntegrationContainer.postgres::getPassword)
-        registry.add("poppy.execution.offline-recovery-enabled") { false }
+        fun registerPostgresProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url", PostgresIntegrationContainer.postgres::getJdbcUrl)
+            registry.add("spring.datasource.username", PostgresIntegrationContainer.postgres::getUsername)
+            registry.add("spring.datasource.password", PostgresIntegrationContainer.postgres::getPassword)
+            registry.add("poppy.execution.offline-recovery-enabled") { false }
+        }
     }
-}
 }
