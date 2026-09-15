@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface AgentJpaRepository : JpaRepository<AgentEntity, UUID> {
     fun findByName(name: String): AgentEntity?
+
+    fun findByCredentialDigest(digest: String): AgentEntity?
 }

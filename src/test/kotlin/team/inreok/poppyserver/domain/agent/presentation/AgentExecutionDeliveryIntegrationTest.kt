@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import team.inreok.poppyserver.domain.agent.application.AgentRepository
+import team.inreok.poppyserver.domain.agent.application.AgentCredentialService
 import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.execution.application.ExecutionRepository
 import team.inreok.poppyserver.domain.execution.model.Execution
@@ -97,8 +98,8 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.error.code").value("ROBOT_NOT_FOUND"))
 
         mockMvc.perform(nextRequest(UUID.randomUUID(), UUID.randomUUID()))
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.error.code").value("AGENT_NOT_FOUND"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
     }
 
     @Test
@@ -152,15 +153,14 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
     }
 
     private fun saveAgent(): Agent = inTransaction {
-        agentRepository.save(
-            Agent.register(
+        val agent = Agent.register(
                 name = "delivery-agent-${UUID.randomUUID()}",
                 agentVersion = "1.0.0",
                 sdkVersion = "2.0.0",
                 platform = "linux-arm64",
                 registeredAt = Instant.parse("2026-09-14T00:00:00Z"),
-            ),
-        )
+            ).apply { rotateCredential(AgentCredentialService.digest(id.toString())) }
+        agentRepository.save(agent)
     }
 
     private fun saveBoundRobot(agentId: UUID, currentExecutionId: UUID?): Robot = inTransaction {
@@ -196,7 +196,7 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
     private fun nextRequest(agentId: UUID, robotId: UUID) =
         get("/api/v1/internal/agents/$agentId/executions/next")
             .param("robotId", robotId.toString())
-            .header("X-Agent-Token", TEST_TOKEN)
+            .header("X-Agent-Token", agentId.toString())
 
     companion object {
         private const val TEST_TOKEN = "test-agent-token"

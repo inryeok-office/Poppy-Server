@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import team.inreok.poppyserver.domain.agent.application.AgentRepository
+import team.inreok.poppyserver.domain.agent.application.AgentCredentialService
 import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.execution.application.ExecutionRepository
 import team.inreok.poppyserver.domain.execution.model.Execution
@@ -231,8 +232,8 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
         val execution = saveExecution(ExecutionStatus.RUNNING)
 
         report(UUID.randomUUID(), execution.id, UUID.randomUUID(), "COMPLETED")
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.error.code").value("AGENT_NOT_FOUND"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
 
         report(agent.id, execution.id, UUID.randomUUID(), "COMPLETED")
             .andExpect(status().isNotFound)
@@ -284,21 +285,20 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
 
     private fun report(agentId: UUID, executionId: UUID, robotId: UUID, status: String) = mockMvc.perform(
         post("/api/v1/internal/agents/$agentId/executions/$executionId/status")
-            .header("X-Agent-Token", TEST_TOKEN)
+            .header("X-Agent-Token", agentId.toString())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"robotId\":\"$robotId\",\"status\":\"$status\"}"),
     )
 
     private fun saveAgent(): Agent = inTransaction {
-        agentRepository.save(
-            Agent.register(
+        val agent = Agent.register(
                 name = "status-agent-${UUID.randomUUID()}",
                 agentVersion = "1.0.0",
                 sdkVersion = "2.0.0",
                 platform = "linux-arm64",
                 registeredAt = Instant.parse("2026-09-14T00:00:00Z"),
-            ),
-        )
+            ).apply { rotateCredential(AgentCredentialService.digest(id.toString())) }
+        agentRepository.save(agent)
     }
 
     private fun saveExecution(status: ExecutionStatus): Execution = inTransaction {

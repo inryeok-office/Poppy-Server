@@ -162,11 +162,12 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
             platform = "linux-x86_64",
         )
         val agentId = UUID.fromString(firstResponse.body["data"]["agentId"].asText())
+        val agentToken = firstResponse.body["data"]["agentToken"].asText()
         val registeredAt = agentRepository.findById(agentId)?.registeredAt
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", agentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 75, null)),
         ).andExpect(status().isOk)
@@ -232,17 +233,17 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `Heartbeat가 Agent와 Robot 상태 및 nullable reference를 갱신한다`() {
         val robot = saveRobot("GO2", "EDU", "1.0.0", "MOVE")
-        val agentId = UUID.fromString(
-            registerAgent(
+        val registration = registerAgent(
                 agentName = "heartbeat-${UUID.randomUUID()}",
                 robots = listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
-            ).body["data"]["agentId"].asText(),
-        )
+            )
+        val agentId = UUID.fromString(registration.body["data"]["agentId"].asText())
+        val agentToken = registration.body["data"]["agentToken"].asText()
         val executionId = UUID.randomUUID()
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", agentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     heartbeatJson(
@@ -269,7 +270,7 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", agentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 75, null, includeCurrentExecutionId = false)),
         )
@@ -279,7 +280,7 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", agentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "OFFLINE", "UNAVAILABLE", null, null)),
         )
@@ -294,12 +295,12 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `Heartbeat는 Agent 존재·token·binding과 battery 범위를 검증한다`() {
         val robot = saveRobot("GO2", "EDU", "1.0.0", "MOVE")
-        val agentId = UUID.fromString(
-            registerAgent(
+        val registration = registerAgent(
                 "bound-${UUID.randomUUID()}",
                 listOf(registrationRobotJson(robot, "1.0.0", "MOVE")),
-            ).body["data"]["agentId"].asText(),
-        )
+            )
+        val agentId = UUID.fromString(registration.body["data"]["agentId"].asText())
+        val agentToken = registration.body["data"]["agentToken"].asText()
 
         mockMvc.perform(
             post("/api/v1/internal/agents/${UUID.randomUUID()}/heartbeat")
@@ -307,8 +308,8 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 50, null)),
         )
-            .andExpect(status().isNotFound)
-            .andExpect(jsonPath("$.error.code").value("AGENT_NOT_FOUND"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
@@ -319,12 +320,12 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
 
-        val otherAgentId = UUID.fromString(
-            registerAgent("unbound-${UUID.randomUUID()}").body["data"]["agentId"].asText(),
-        )
+        val otherRegistration = registerAgent("unbound-${UUID.randomUUID()}")
+        val otherAgentId = UUID.fromString(otherRegistration.body["data"]["agentId"].asText())
+        val otherAgentToken = otherRegistration.body["data"]["agentToken"].asText()
         mockMvc.perform(
             post("/api/v1/internal/agents/$otherAgentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", otherAgentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 50, null)),
         )
@@ -333,7 +334,7 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
 
         mockMvc.perform(
             post("/api/v1/internal/agents/$agentId/heartbeat")
-                .header("X-Agent-Token", TEST_TOKEN)
+                .header("X-Agent-Token", agentToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(heartbeatJson(robot.id, "ONLINE", "READY", 101, null)),
         )

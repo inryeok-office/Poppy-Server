@@ -28,6 +28,9 @@ class AgentPersistenceAdapter(
 
     override fun findByName(name: String): Agent? = agentJpaRepository.findByName(name)?.toDomain()
 
+    override fun findByCredentialDigest(digest: String): Agent? =
+        agentJpaRepository.findByCredentialDigest(digest)?.toDomain()
+
     private fun AgentEntity.updateFrom(agent: Agent) {
         id = agent.id
         name = agent.name
@@ -36,6 +39,7 @@ class AgentPersistenceAdapter(
         platform = agent.platform
         registeredAt = agent.registeredAt
         lastHeartbeatAt = agent.lastHeartbeatAt
+        credentialDigest = agent.credentialDigest
     }
 
     private fun AgentEntity.toDomain(): Agent = Agent.restore(
@@ -46,5 +50,6 @@ class AgentPersistenceAdapter(
         platform = platform,
         registeredAt = registeredAt,
         lastHeartbeatAt = lastHeartbeatAt,
+        credentialDigest = credentialDigest,
     )
 }

@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import team.inreok.poppyserver.domain.agent.application.AgentRepository
+import team.inreok.poppyserver.domain.agent.application.AgentCredentialService
 import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionStatusService
 import team.inreok.poppyserver.domain.execution.application.ExecutionCancellationService
@@ -283,15 +284,14 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
     }
 
     private fun saveAgent(): Agent = inTransaction {
-        agentRepository.save(
-            Agent.register(
+        val agent = Agent.register(
                 name = "cancel-agent-${UUID.randomUUID()}",
                 agentVersion = "1.0.0",
                 sdkVersion = "2.0.0",
                 platform = "linux-arm64",
                 registeredAt = Instant.parse("2026-09-14T00:00:00Z"),
-            ),
-        )
+            ).apply { rotateCredential(AgentCredentialService.digest(id.toString())) }
+        agentRepository.save(agent)
     }
 
     private fun bindRobotToAgent(robotId: UUID, agentId: UUID) {
