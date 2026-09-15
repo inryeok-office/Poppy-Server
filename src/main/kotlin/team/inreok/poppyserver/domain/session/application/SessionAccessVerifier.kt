@@ -43,7 +43,7 @@ class SessionAccessVerifier(
         sessionActivityService.touch(authenticatedSession.id)
     }
 
-    private fun authenticate(rawToken: String?): Session {
+    fun authenticate(rawToken: String?): Session {
         if (rawToken.isNullOrBlank()) {
             throw ApplicationException(ErrorCode.SESSION_TOKEN_INVALID)
         }
