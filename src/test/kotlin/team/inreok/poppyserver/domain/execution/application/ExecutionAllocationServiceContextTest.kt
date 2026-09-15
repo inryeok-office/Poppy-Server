@@ -39,5 +39,9 @@ class ExecutionAllocationServiceContextTest {
 
         @Bean
         fun robotRepository(): RobotRepository = mock(RobotRepository::class.java)
+
+        @Bean
+        fun executionStatusEventPublisher(): ExecutionStatusEventPublisher =
+            mock(ExecutionStatusEventPublisher::class.java)
     }
 }

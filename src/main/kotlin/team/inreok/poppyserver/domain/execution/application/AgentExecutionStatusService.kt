@@ -19,7 +19,7 @@ class AgentExecutionStatusService(
     private val agentRepository: AgentRepository,
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
-    private val executionStatusEventPublisher: ExecutionStatusEventPublisher? = null,
+    private val executionStatusEventPublisher: ExecutionStatusEventPublisher,
 ) {
     @Transactional
     fun report(agentId: UUID, executionId: UUID, command: ReportExecutionStatusCommand): ExecutionStatusReport {
@@ -61,7 +61,7 @@ class AgentExecutionStatusService(
             robotRepository.save(robot)
         }
         if (executionChanged && execution.sessionId != null) {
-            executionStatusEventPublisher?.publish(
+            executionStatusEventPublisher.publish(
                 ExecutionStatusChangedEvent(
                     executionId = execution.id,
                     sessionId = execution.sessionId,
