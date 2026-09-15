@@ -15,5 +15,7 @@ interface SessionRepository {
 
     fun findByRecoveryCodeDigest(recoveryCodeDigest: String): Session?
 
+    fun findByRecoveryCodeDigestForUpdate(recoveryCodeDigest: String): Session?
+
     fun findInactiveIdsBefore(cutoff: Instant): List<UUID>
 }

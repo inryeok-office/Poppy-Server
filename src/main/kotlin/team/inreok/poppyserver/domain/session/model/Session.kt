@@ -16,7 +16,8 @@ class Session private constructor(
     var sessionTokenDigest: String? = sessionTokenDigestValue
         private set
 
-    val recoveryCodeDigest: String? = recoveryCodeDigestValue
+    var recoveryCodeDigest: String? = recoveryCodeDigestValue
+        private set
 
     var currentBlockVersion: Long = currentBlockVersionValue
         private set
@@ -87,5 +88,10 @@ class Session private constructor(
 
     fun rotateSessionToken(newDigest: String) {
         sessionTokenDigest = newDigest
+    }
+
+    fun rotateCredentials(newSessionTokenDigest: String, newRecoveryCodeDigest: String) {
+        sessionTokenDigest = newSessionTokenDigest
+        recoveryCodeDigest = newRecoveryCodeDigest
     }
 }

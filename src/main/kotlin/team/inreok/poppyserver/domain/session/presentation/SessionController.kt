@@ -75,6 +75,7 @@ data class SessionRestoreRequest(
 data class SessionRecoveryResponse(
     val sessionId: UUID,
     val sessionToken: String,
+    val recoveryCode: String,
     val currentBlockVersion: Long,
 )
 
@@ -93,6 +94,7 @@ private fun SessionCreationResult.toResponse(): SessionResponse = SessionRespons
 private fun SessionRecoveryResult.toResponse(): SessionRecoveryResponse = SessionRecoveryResponse(
     sessionId = sessionId,
     sessionToken = sessionToken,
+    recoveryCode = recoveryCode,
     currentBlockVersion = currentBlockVersion,
 )
 

@@ -35,6 +35,9 @@ class SessionPersistenceAdapter(
     override fun findByRecoveryCodeDigest(recoveryCodeDigest: String): Session? =
         sessionJpaRepository.findByRecoveryCodeDigest(recoveryCodeDigest)?.toDomain()
 
+    override fun findByRecoveryCodeDigestForUpdate(recoveryCodeDigest: String): Session? =
+        sessionJpaRepository.findByRecoveryCodeDigestForUpdate(recoveryCodeDigest)?.toDomain()
+
     private fun SessionEntity.updateFrom(session: Session) {
         id = session.id
         currentBlockVersion = session.currentBlockVersion

@@ -13,6 +13,10 @@ interface SessionJpaRepository : JpaRepository<SessionEntity, UUID> {
 
     fun findByRecoveryCodeDigest(recoveryCodeDigest: String): SessionEntity?
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select session from SessionEntity session where session.recoveryCodeDigest = :recoveryCodeDigest")
+    fun findByRecoveryCodeDigestForUpdate(@Param("recoveryCodeDigest") recoveryCodeDigest: String): SessionEntity?
+
     @Query("select session.id from SessionEntity session where session.expiredAt is null and session.lastActivityAt <= :cutoff")
     fun findInactiveIdsBefore(@Param("cutoff") cutoff: Instant): List<UUID>
 

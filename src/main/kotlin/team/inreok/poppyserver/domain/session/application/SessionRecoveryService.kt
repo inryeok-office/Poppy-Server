@@ -15,6 +15,7 @@ class SessionRecoveryService(
     private val sessionRepository: SessionRepository,
     private val sessionAccessVerifier: SessionAccessVerifier,
     private val recoveryAttemptRateLimiter: RecoveryAttemptRateLimiter,
+    private val recoveryCodeIssuer: RecoveryCodeIssuer,
 ) {
     @Transactional
     fun restore(rawRecoveryCode: String?, clientKey: String): SessionRecoveryResult {
@@ -24,9 +25,9 @@ class SessionRecoveryService(
         }
         recoveryAttemptRateLimiter.checkAndRecord(clientKey)
         val digest = RecoveryCodeGenerator.digest(normalized)
-        val candidate = sessionRepository.findByRecoveryCodeDigest(digest)
+        sessionRepository.findByRecoveryCodeDigest(digest)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
-        val session = sessionRepository.findByIdForUpdate(candidate.id)
+        val session = sessionRepository.findByRecoveryCodeDigestForUpdate(digest)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
         if (!sameDigest(session.recoveryCodeDigest, digest)) {
             throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
@@ -35,13 +36,15 @@ class SessionRecoveryService(
             throw ApplicationException(ErrorCode.SESSION_EXPIRED)
         }
         val issuedToken = sessionAccessVerifier.issue()
-        session.rotateSessionToken(issuedToken.digest)
+        val issuedRecoveryCode = recoveryCodeIssuer.issue()
+        session.rotateCredentials(issuedToken.digest, issuedRecoveryCode.digest)
         sessionRepository.save(session)
         recoveryAttemptRateLimiter.reset(clientKey)
         return SessionRecoveryResult(
             sessionId = session.id,
             currentBlockVersion = session.currentBlockVersion,
             sessionToken = issuedToken.raw,
+            recoveryCode = issuedRecoveryCode.raw,
         )
     }
 
@@ -58,4 +61,5 @@ data class SessionRecoveryResult(
     val sessionId: UUID,
     val currentBlockVersion: Long,
     val sessionToken: String,
+    val recoveryCode: String,
 )

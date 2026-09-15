@@ -6,6 +6,7 @@ import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
@@ -43,6 +44,26 @@ class RecoveryAttemptRateLimiter(
     fun reset(key: String) {
         windows.remove(key)
     }
+
+    @Scheduled(fixedDelayString = "\${poppy.session.recovery-attempt-cleanup-interval-milliseconds:60000}")
+    fun cleanupExpiredEntries() {
+        cleanupExpiredEntries(Instant.now(clock ?: Clock.systemUTC()))
+    }
+
+    internal fun cleanupExpiredEntries(now: Instant): Int {
+        var removed = 0
+        windows.entries.removeIf { entry ->
+            if (!now.isBefore(entry.value.startedAt.plus(window))) {
+                removed += 1
+                true
+            } else {
+                false
+            }
+        }
+        return removed
+    }
+
+    internal fun entryCount(): Int = windows.size
 
     private data class AttemptWindow(val startedAt: Instant, val attempts: Int)
 }
