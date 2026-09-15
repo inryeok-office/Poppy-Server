@@ -115,6 +115,33 @@ class OfflineExecutionRecoveryIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `처리 불가능한 후보가 있어도 정상 후보를 계속 복구한다`() {
+        val terminalFixture = inTransaction {
+            val created = createFixture(ExecutionStatus.RUNNING)
+            val execution = executionRepository.findByIdForStatusUpdate(created.executionId)!!
+            execution.complete()
+            executionRepository.save(execution)
+            created
+        }
+        val activeFixture = inTransaction { createFixture(ExecutionStatus.RUNNING) }
+
+        assertEquals(1, recoveryService.recoverOfflineExecutions())
+        assertEquals(
+            ExecutionStatus.COMPLETED,
+            executionRepository.findById(terminalFixture.executionId)?.status,
+        )
+        assertEquals(
+            ExecutionStatus.FAILED,
+            executionRepository.findById(activeFixture.executionId)?.status,
+        )
+        assertNull(robotRepository.findById(activeFixture.robotId)?.currentExecutionId)
+        assertEquals(
+            terminalFixture.executionId,
+            robotRepository.findById(terminalFixture.robotId)?.currentExecutionId,
+        )
+    }
+
+    @Test
     fun `Robot과 Execution binding이 다르면 recovery하지 않는다`() {
         val fixture = inTransaction {
             val offlineRobot = robotRepository.save(robot())

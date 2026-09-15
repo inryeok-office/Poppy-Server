@@ -16,11 +16,13 @@ class OfflineExecutionRecoveryQueryPersistenceAdapter(
     @Transactional(readOnly = true)
     override fun findCandidates(limit: Int): List<OfflineExecutionRecoveryCandidate> = jdbcTemplate.query(
         """
-        select id, current_execution_id
+        select robots.id, robots.current_execution_id
         from robots
-        where connection_status = 'OFFLINE'
-          and current_execution_id is not null
-        order by id
+        join executions execution on execution.id = robots.current_execution_id
+        where robots.connection_status = 'OFFLINE'
+          and execution.status in ('ASSIGNED', 'RUNNING')
+          and execution.assigned_robot_id = robots.id
+        order by robots.id
         limit :limit
         """.trimIndent(),
         mapOf("limit" to limit),

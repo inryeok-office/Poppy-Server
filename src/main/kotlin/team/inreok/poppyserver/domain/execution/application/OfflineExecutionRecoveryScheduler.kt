@@ -1,12 +1,14 @@
 package team.inreok.poppyserver.domain.execution.application
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
 @Component
-@ConditionalOnBean(OfflineExecutionRecoveryService::class)
+@ConditionalOnProperty(
+    prefix = "spring.datasource",
+    name = ["url"],
+)
 @ConditionalOnProperty(
     prefix = "poppy.execution",
     name = ["offline-recovery-enabled"],
