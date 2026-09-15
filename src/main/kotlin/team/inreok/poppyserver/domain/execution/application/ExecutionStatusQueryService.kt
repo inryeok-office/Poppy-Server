@@ -16,11 +16,14 @@ class ExecutionStatusQueryService(
 ) {
     @Transactional(readOnly = true)
     fun find(executionId: UUID, sessionToken: String?): ExecutionStatusResponse {
+        val authenticatedSession = sessionAccessVerifier.authenticate(sessionToken)
         val view = executionStatusQueryRepository.findById(executionId)
             ?: throw ApplicationException(ErrorCode.EXECUTION_NOT_FOUND)
         val sessionId = view.sessionId
             ?: throw ApplicationException(ErrorCode.EXECUTION_ACCESS_DENIED)
-        sessionAccessVerifier.verifyOwnership(sessionId, sessionToken)
+        if (authenticatedSession.id != sessionId) {
+            throw ApplicationException(ErrorCode.EXECUTION_ACCESS_DENIED)
+        }
         return view.toResponse()
     }
 }

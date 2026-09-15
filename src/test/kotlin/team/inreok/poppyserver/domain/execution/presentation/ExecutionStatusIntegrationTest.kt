@@ -120,9 +120,21 @@ class ExecutionStatusIntegrationTest : PostgresIntegrationTest() {
 
     @Test
     fun `unknown execution is not exposed`() {
-        mockMvc.perform(get("/api/v1/executions/${UUID.randomUUID()}"))
+        val session = sessionService.createSession()
+
+        mockMvc.perform(
+            get("/api/v1/executions/${UUID.randomUUID()}")
+                .header("X-Session-Token", session.sessionToken),
+        )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error.code").value("EXECUTION_NOT_FOUND"))
+    }
+
+    @Test
+    fun `missing token is unauthorized even for unknown execution`() {
+        mockMvc.perform(get("/api/v1/executions/${UUID.randomUUID()}"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("SESSION_TOKEN_INVALID"))
     }
 
     @Test
