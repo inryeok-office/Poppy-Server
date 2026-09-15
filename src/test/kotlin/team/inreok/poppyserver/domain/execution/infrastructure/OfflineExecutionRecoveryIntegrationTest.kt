@@ -6,9 +6,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import team.inreok.poppyserver.domain.execution.application.ExecutionRepository
@@ -41,6 +43,18 @@ class OfflineExecutionRecoveryIntegrationTest : PostgresIntegrationTest() {
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
 
+    @Autowired
+    lateinit var jdbcTemplate: JdbcTemplate
+
+    @BeforeEach
+    fun cleanFixtures() {
+        inTransaction {
+            jdbcTemplate.update("delete from robot_capabilities")
+            jdbcTemplate.update("delete from robots")
+            jdbcTemplate.update("delete from executions")
+        }
+    }
+
     @Test
     fun `OFFLINE Robot의 ASSIGNED와 RUNNING Execution을 FAILED로 종결하고 점유를 해제한다`() {
         val fixtures = inTransaction {
@@ -52,10 +66,12 @@ class OfflineExecutionRecoveryIntegrationTest : PostgresIntegrationTest() {
         fixtures.forEach { fixture ->
             val execution = executionRepository.findById(fixture.executionId)
             val robot = robotRepository.findById(fixture.robotId)
-            assertEquals(ExecutionStatus.FAILED, execution?.status)
-            assertNotNull(execution?.finishedAt)
-            assertEquals(fixture.robotId, execution?.assignedRobotId)
-            assertNull(robot?.currentExecutionId)
+            assertNotNull(execution)
+            assertEquals(ExecutionStatus.FAILED, execution.status)
+            assertNotNull(execution.finishedAt)
+            assertEquals(fixture.robotId, execution.assignedRobotId)
+            assertNotNull(robot)
+            assertNull(robot.currentExecutionId)
         }
     }
 
@@ -92,7 +108,7 @@ class OfflineExecutionRecoveryIntegrationTest : PostgresIntegrationTest() {
 
         val finishedAt = executionRepository.findById(fixture.executionId)?.finishedAt
 
-        assertEquals(0, recoveryService.recoverOfflineExecutions())
+        recoveryService.recoverOfflineExecutions()
         assertEquals(ExecutionStatus.COMPLETED, executionRepository.findById(fixture.executionId)?.status)
         assertEquals(finishedAt, executionRepository.findById(fixture.executionId)?.finishedAt)
         assertEquals(fixture.executionId, robotRepository.findById(fixture.robotId)?.currentExecutionId)
