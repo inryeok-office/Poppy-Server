@@ -245,6 +245,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/executions")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":1}"),
         )
             .andExpect(status().isCreated)
@@ -264,6 +265,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/executions")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{}"),
         )
             .andExpect(status().isBadRequest)
@@ -272,6 +274,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/executions")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":0}"),
         )
             .andExpect(status().isBadRequest)
@@ -280,6 +283,7 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/sessions/${session.sessionId}/executions")
                 .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
                 .content("{\"blockVersion\":2}"),
         )
             .andExpect(status().isConflict)

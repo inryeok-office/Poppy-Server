@@ -28,15 +28,20 @@ class SessionPersistenceAdapter(
 
     override fun findByIdForUpdate(id: UUID): Session? = sessionJpaRepository.findByIdForUpdate(id)?.toDomain()
 
+    override fun findByTokenDigest(tokenDigest: String): Session? =
+        sessionJpaRepository.findBySessionTokenDigest(tokenDigest)?.toDomain()
+
     private fun SessionEntity.updateFrom(session: Session) {
         id = session.id
         currentBlockVersion = session.currentBlockVersion
         createdAt = session.createdAt
+        sessionTokenDigest = session.sessionTokenDigest
     }
 
     private fun SessionEntity.toDomain(): Session = Session.restore(
         id = requireNotNull(id),
         currentBlockVersion = currentBlockVersion,
         createdAt = createdAt,
+        sessionTokenDigest = sessionTokenDigest,
     )
 }

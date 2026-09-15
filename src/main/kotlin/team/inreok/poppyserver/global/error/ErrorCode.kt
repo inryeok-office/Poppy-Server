@@ -32,6 +32,8 @@ enum class ErrorCode(
     EXECUTION_STATUS_UNSUPPORTED(HttpStatus.BAD_REQUEST, "EXECUTION_STATUS_UNSUPPORTED", "The Execution status is unsupported"),
     EXECUTION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "EXECUTION_STATUS_TRANSITION_INVALID", "The Execution status transition is invalid"),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "The Session was not found"),
+    SESSION_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "SESSION_TOKEN_INVALID", "The Session token is invalid"),
+    EXECUTION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "EXECUTION_ACCESS_DENIED", "The Execution does not belong to the Session"),
     BLOCK_REVISION_NOT_FOUND(HttpStatus.NOT_FOUND, "BLOCK_REVISION_NOT_FOUND", "The Block Revision was not found"),
     SIMULATION_BLOCK_VERSION_INVALID(HttpStatus.BAD_REQUEST, "SIMULATION_BLOCK_VERSION_INVALID", "The simulation block version is invalid"),
     SIMULATION_BLOCK_VERSION_STALE(HttpStatus.CONFLICT, "SIMULATION_BLOCK_VERSION_STALE", "The simulation block version is not current"),

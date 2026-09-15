@@ -15,13 +15,16 @@ import team.inreok.poppyserver.global.error.ErrorCode
 class SessionService(
     private val sessionRepository: SessionRepository,
     private val blockRevisionRepository: BlockRevisionRepository,
+    private val sessionAccessVerifier: SessionAccessVerifier,
 ) {
     @Transactional
     fun createSession(): SessionCreationResult {
-        val session = sessionRepository.save(Session.create())
+        val issuedToken = sessionAccessVerifier.issue()
+        val session = sessionRepository.save(Session.createWithToken(issuedToken.digest))
         return SessionCreationResult(
             sessionId = session.id,
             currentBlockVersion = session.currentBlockVersion,
+            sessionToken = issuedToken.raw,
         )
     }
 
@@ -48,6 +51,7 @@ class SessionService(
 data class SessionCreationResult(
     val sessionId: UUID,
     val currentBlockVersion: Long,
+    val sessionToken: String,
 )
 
 data class BlockRevisionAppendResult(

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface SessionJpaRepository : JpaRepository<SessionEntity, UUID> {
+    fun findBySessionTokenDigest(sessionTokenDigest: String): SessionEntity?
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select session from SessionEntity session where session.id = :id")
     fun findByIdForUpdate(@Param("id") id: UUID): SessionEntity?

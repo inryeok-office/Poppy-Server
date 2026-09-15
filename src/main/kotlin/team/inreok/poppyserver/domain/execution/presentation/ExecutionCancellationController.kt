@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 import team.inreok.poppyserver.domain.execution.application.ExecutionCancellationResult
 import team.inreok.poppyserver.domain.execution.application.ExecutionCancellationService
@@ -19,8 +20,11 @@ class ExecutionCancellationController(
     private val executionCancellationService: ExecutionCancellationService,
 ) {
     @PostMapping("/{executionId}/cancel")
-    fun cancel(@PathVariable executionId: UUID): ApiResponse<ExecutionCancellationResponse> = ApiResponse.success(
-        executionCancellationService.cancel(executionId).toResponse(),
+    fun cancel(
+        @PathVariable executionId: UUID,
+        @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String?,
+    ): ApiResponse<ExecutionCancellationResponse> = ApiResponse.success(
+        executionCancellationService.cancelForSession(executionId, sessionToken).toResponse(),
     )
 }
 
