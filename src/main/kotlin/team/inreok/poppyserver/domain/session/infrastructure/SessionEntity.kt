@@ -18,4 +18,8 @@ class SessionEntity(
     var createdAt: Instant = Instant.EPOCH,
     @Column(name = "session_token_digest", unique = true)
     var sessionTokenDigest: String? = null,
+    @Column(name = "last_activity_at")
+    var lastActivityAt: Instant? = null,
+    @Column(name = "expired_at")
+    var expiredAt: Instant? = null,
 )

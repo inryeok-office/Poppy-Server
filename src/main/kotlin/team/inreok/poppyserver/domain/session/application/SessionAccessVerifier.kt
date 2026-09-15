@@ -15,6 +15,7 @@ import team.inreok.poppyserver.global.error.ErrorCode
 @ConditionalOnProperty(prefix = "spring.datasource", name = ["url"])
 class SessionAccessVerifier(
     private val sessionRepository: SessionRepository,
+    private val sessionActivityService: SessionActivityService,
 ) {
     fun issue(): IssuedSessionToken {
         val bytes = ByteArray(TOKEN_BYTES)
@@ -29,6 +30,8 @@ class SessionAccessVerifier(
         if (!matches(session.sessionTokenDigest, rawToken)) {
             throw ApplicationException(ErrorCode.SESSION_TOKEN_INVALID)
         }
+        ensureActive(session)
+        sessionActivityService.touch(session.id)
         return session
     }
 
@@ -37,6 +40,7 @@ class SessionAccessVerifier(
         if (authenticatedSession.id != sessionId) {
             throw ApplicationException(ErrorCode.EXECUTION_ACCESS_DENIED)
         }
+        sessionActivityService.touch(authenticatedSession.id)
     }
 
     private fun authenticate(rawToken: String?): Session {
@@ -49,7 +53,14 @@ class SessionAccessVerifier(
         if (!matches(session.sessionTokenDigest, rawToken)) {
             throw ApplicationException(ErrorCode.SESSION_TOKEN_INVALID)
         }
+        ensureActive(session)
         return session
+    }
+
+    private fun ensureActive(session: Session) {
+        if (session.expiredAt != null) {
+            throw ApplicationException(ErrorCode.SESSION_EXPIRED)
+        }
     }
 
     private fun matches(storedDigest: String?, rawToken: String?): Boolean {
