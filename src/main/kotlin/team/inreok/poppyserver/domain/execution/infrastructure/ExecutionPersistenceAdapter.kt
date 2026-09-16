@@ -19,7 +19,9 @@ class ExecutionPersistenceAdapter(
             check(
                 existing.sessionId == execution.sessionId &&
                     existing.blockVersion == execution.blockVersion &&
-                    existing.queuedAt == execution.queuedAt,
+                    existing.queuedAt == execution.queuedAt &&
+                    existing.compiledCommandPayload == execution.compiledCommandPayload &&
+                    existing.requiredCapabilities == execution.requiredCapabilitiesForPersistence(),
             ) { "Execution provenance is immutable" }
         }
         val entity = existing ?: ExecutionEntity(id = execution.id)
@@ -48,6 +50,8 @@ class ExecutionPersistenceAdapter(
         assignedRobotId = execution.assignedRobotId
         sessionId = execution.sessionId
         blockVersion = execution.blockVersion
+        compiledCommandPayload = execution.compiledCommandPayload
+        requiredCapabilities = execution.requiredCapabilitiesForPersistence()
         queuedAt = execution.queuedAt
         startedAt = execution.startedAt
         finishedAt = execution.finishedAt
@@ -59,8 +63,13 @@ class ExecutionPersistenceAdapter(
         assignedRobotId = assignedRobotId,
         sessionId = sessionId,
         blockVersion = blockVersion,
+        compiledCommandPayload = compiledCommandPayload,
+        requiredCapabilities = requiredCapabilities?.toSet() ?: emptySet(),
         queuedAt = queuedAt,
         startedAt = startedAt,
         finishedAt = finishedAt,
     )
+
+    private fun Execution.requiredCapabilitiesForPersistence(): List<String>? =
+        compiledCommandPayload?.let { requiredCapabilities.sorted() }
 }

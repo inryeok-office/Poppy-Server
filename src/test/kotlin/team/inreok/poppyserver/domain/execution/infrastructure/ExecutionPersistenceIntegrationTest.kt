@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.execution.application.ExecutionRepository
+import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.validBlockProgram
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -21,6 +23,9 @@ class ExecutionPersistenceIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var executionRepository: ExecutionRepository
+
+    @Autowired
+    lateinit var sessionService: SessionService
 
     @ParameterizedTest
     @EnumSource(ExecutionStatus::class)
@@ -68,6 +73,30 @@ class ExecutionPersistenceIntegrationTest : PostgresIntegrationTest() {
         val restored = executionRepository.findById(execution.id)
         assertEquals(startedAt, restored?.startedAt)
         assertEquals(finishedAt, restored?.finishedAt)
+    }
+
+    @Test
+    @Transactional
+    fun `compiled command snapshot and required capabilities survive lifecycle persistence`() {
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
+        val payload = """{"protocolVersion":1,"commands":[]}"""
+        val execution = Execution.create(
+            sessionId = session.sessionId,
+            blockVersion = 1,
+            compiledCommandPayload = payload,
+            requiredCapabilities = setOf("COMMAND_TURN", "COMMAND_MOVE"),
+        )
+
+        executionRepository.save(execution)
+        execution.assign()
+        execution.start()
+        execution.complete()
+        executionRepository.save(execution)
+
+        val restored = executionRepository.findById(execution.id)
+        assertEquals(payload, restored?.compiledCommandPayload)
+        assertEquals(setOf("COMMAND_TURN", "COMMAND_MOVE"), restored?.requiredCapabilities)
     }
 
     @Test

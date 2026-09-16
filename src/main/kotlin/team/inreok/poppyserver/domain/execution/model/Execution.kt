@@ -10,6 +10,8 @@ class Execution private constructor(
     assignedRobotIdValue: UUID?,
     val sessionId: UUID?,
     val blockVersion: Long?,
+    val compiledCommandPayload: String?,
+    private val requiredCapabilitiesValue: Set<String>,
     val queuedAt: Instant?,
     private var startedAtValue: Instant?,
     private var finishedAtValue: Instant?,
@@ -26,6 +28,14 @@ class Execution private constructor(
 
     val finishedAt: Instant?
         get() = finishedAtValue
+
+    val requiredCapabilities: Set<String>
+        get() = requiredCapabilitiesValue
+
+    init {
+        require(compiledCommandPayload == null || compiledCommandPayload.isNotBlank())
+        require(compiledCommandPayload != null || requiredCapabilitiesValue.isEmpty())
+    }
 
     fun assign() {
         transitionTo(ExecutionStatus.ASSIGNED)
@@ -105,6 +115,8 @@ class Execution private constructor(
             assignedRobotIdValue = null,
             sessionId = null,
             blockVersion = null,
+            compiledCommandPayload = null,
+            requiredCapabilitiesValue = emptySet(),
             queuedAt = null,
             startedAtValue = null,
             finishedAtValue = null,
@@ -120,6 +132,29 @@ class Execution private constructor(
             assignedRobotIdValue = null,
             sessionId = sessionId,
             blockVersion = blockVersion,
+            compiledCommandPayload = null,
+            requiredCapabilitiesValue = emptySet(),
+            queuedAt = queuedAt,
+            startedAtValue = null,
+            finishedAtValue = null,
+        )
+
+        fun create(
+            sessionId: UUID,
+            blockVersion: Long,
+            compiledCommandPayload: String,
+            requiredCapabilities: Set<String>,
+            queuedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
+        ): Execution = Execution(
+            id = UUID.randomUUID(),
+            statusValue = ExecutionStatus.QUEUED,
+            assignedRobotIdValue = null,
+            sessionId = sessionId,
+            blockVersion = blockVersion,
+            compiledCommandPayload = compiledCommandPayload.also {
+                require(it.isNotBlank()) { "compiled command payload must not be blank" }
+            },
+            requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
             startedAtValue = null,
             finishedAtValue = null,
@@ -131,6 +166,8 @@ class Execution private constructor(
             assignedRobotId: UUID? = null,
             sessionId: UUID? = null,
             blockVersion: Long? = null,
+            compiledCommandPayload: String? = null,
+            requiredCapabilities: Set<String> = emptySet(),
             queuedAt: Instant? = null,
             startedAt: Instant? = null,
             finishedAt: Instant? = null,
@@ -140,6 +177,8 @@ class Execution private constructor(
             assignedRobotIdValue = assignedRobotId,
             sessionId = sessionId,
             blockVersion = blockVersion,
+            compiledCommandPayload = compiledCommandPayload,
+            requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
             startedAtValue = startedAt,
             finishedAtValue = finishedAt,
