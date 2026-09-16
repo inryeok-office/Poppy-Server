@@ -42,7 +42,7 @@ High-level Command Protocol은 Block Program과 Robot SDK 사이의 Server 내�
 | POSTURE | `posture`: `SIT` 또는 `STAND` |
 | PRESET | `presetCode`: string |
 
-Block mapping은 다음 compiler에서 적용합니다.
+Block mapping은 `BlockProgramCompiler`에서 적용합니다.
 
 - WAIT → WAIT
 - MOVE_FORWARD/MOVE_BACKWARD → MOVE
@@ -57,4 +57,4 @@ Block mapping은 다음 compiler에서 적용합니다.
 
 Parser와 serializer는 unknown field, unsupported version, 잘못된 parameter type, numeric string coercion, sequence 위반을 허용하지 않습니다.
 
-`requiredCapabilities`, compiler, Robot matching, Agent parser와 실행은 후속 범위입니다.
+`requiredCapabilities`, Robot matching, Agent parser와 실행은 후속 범위입니다.
