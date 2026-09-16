@@ -13,4 +13,5 @@ data class ExecutionDeliveryAssignment(
     val currentExecutionId: UUID?,
     val executionId: UUID?,
     val executionStatus: ExecutionStatus?,
+    val compiledCommandPayload: String?,
 )
