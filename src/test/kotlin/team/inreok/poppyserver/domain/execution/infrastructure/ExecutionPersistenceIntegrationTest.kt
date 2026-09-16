@@ -72,6 +72,28 @@ class ExecutionPersistenceIntegrationTest : PostgresIntegrationTest() {
 
     @Test
     @Transactional
+    fun `compiled command snapshot and required capabilities survive lifecycle persistence`() {
+        val payload = """{"protocolVersion":1,"commands":[]}"""
+        val execution = Execution.create(
+            sessionId = UUID.randomUUID(),
+            blockVersion = 1,
+            compiledCommandPayload = payload,
+            requiredCapabilities = setOf("COMMAND_TURN", "COMMAND_MOVE"),
+        )
+
+        executionRepository.save(execution)
+        execution.assign()
+        execution.start()
+        execution.complete()
+        executionRepository.save(execution)
+
+        val restored = executionRepository.findById(execution.id)
+        assertEquals(payload, restored?.compiledCommandPayload)
+        assertEquals(setOf("COMMAND_TURN", "COMMAND_MOVE"), restored?.requiredCapabilities)
+    }
+
+    @Test
+    @Transactional
     fun `legacy Execution은 lifecycle timestamp null로 복원된다`() {
         val execution = Execution.restore(UUID.randomUUID(), ExecutionStatus.QUEUED)
 

@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.time.Instant
 import java.util.UUID
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
@@ -24,6 +26,11 @@ class ExecutionEntity(
     var sessionId: UUID? = null,
     @Column(name = "block_version")
     var blockVersion: Long? = null,
+    @Column(name = "compiled_command_payload", columnDefinition = "text")
+    var compiledCommandPayload: String? = null,
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "required_capabilities", columnDefinition = "jsonb")
+    var requiredCapabilities: List<String>? = null,
     @Column(name = "queued_at")
     var queuedAt: Instant? = null,
     @Column(name = "started_at")

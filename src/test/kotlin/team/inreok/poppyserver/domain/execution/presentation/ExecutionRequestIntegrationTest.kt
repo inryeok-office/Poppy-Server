@@ -74,6 +74,44 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         assertEquals(session.sessionId, restored?.sessionId)
         assertEquals(1, restored?.blockVersion)
         assertEquals(result.queuedAt, restored?.queuedAt)
+        assertEquals(
+            """{"protocolVersion":1,"commands":[{"sequence":0,"sourceBlockId":"stop-fixture","type":"STOP","parameters":{}}]}""",
+            restored?.compiledCommandPayload,
+        )
+        assertEquals(setOf("COMMAND_STOP"), restored?.requiredCapabilities)
+    }
+
+    @Test
+    fun `repeat program is stored as a flat compiled command snapshot`() {
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(
+            session.sessionId,
+            """{"schemaVersion":1,"blocks":[{"id":"start","type":"START","parameters":{}},{"id":"repeat","type":"REPEAT","parameters":{"count":2},"children":[{"id":"turn","type":"TURN_LEFT","parameters":{"angleDegrees":90}},{"id":"wait","type":"WAIT","parameters":{"durationSeconds":1.5}}]},{"id":"end","type":"END","parameters":{}}]}""",
+        )
+        simulationPassService.recordSimulationPass(session.sessionId, 1)
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+        val restored = executionRepository.findById(result.executionId)
+
+        assertEquals(
+            """{"protocolVersion":1,"commands":[{"sequence":0,"sourceBlockId":"turn","type":"TURN","parameters":{"direction":"LEFT","angleDegrees":90.0}},{"sequence":1,"sourceBlockId":"wait","type":"WAIT","parameters":{"durationSeconds":1.5}},{"sequence":2,"sourceBlockId":"turn","type":"TURN","parameters":{"direction":"LEFT","angleDegrees":90.0}},{"sequence":3,"sourceBlockId":"wait","type":"WAIT","parameters":{"durationSeconds":1.5}}]}""",
+            restored?.compiledCommandPayload,
+        )
+        assertEquals(setOf("COMMAND_TURN"), restored?.requiredCapabilities)
+    }
+
+    @Test
+    fun `execution snapshot remains unchanged after a newer revision is created`() {
+        val session = preparedSession()
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+        val before = requireNotNull(executionRepository.findById(result.executionId))
+
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram("newer"))
+
+        val after = requireNotNull(executionRepository.findById(result.executionId))
+        assertEquals(2, sessionRepository.findById(session.sessionId)?.currentBlockVersion)
+        assertEquals(before.compiledCommandPayload, after.compiledCommandPayload)
+        assertEquals(before.requiredCapabilities, after.requiredCapabilities)
     }
 
     @Test
