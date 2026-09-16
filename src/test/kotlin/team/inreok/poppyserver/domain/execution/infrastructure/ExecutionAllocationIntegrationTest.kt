@@ -387,9 +387,9 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
         capabilities: Collection<RobotCapability> = emptyList(),
     ): Robot = robot(capabilities = capabilities)
 
-    private fun snapshotExecution(requiredCapabilities: Set<String>): Execution = Execution.create(
-        sessionId = UUID.randomUUID(),
-        blockVersion = 1,
+    private fun snapshotExecution(requiredCapabilities: Set<String>): Execution = Execution.restore(
+        id = UUID.randomUUID(),
+        status = ExecutionStatus.QUEUED,
         compiledCommandPayload = "{\"protocolVersion\":1,\"commands\":[]}",
         requiredCapabilities = requiredCapabilities,
     )
