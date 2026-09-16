@@ -43,4 +43,5 @@ enum class ErrorCode(
     SIMULATION_PASS_NOT_FOUND(HttpStatus.CONFLICT, "SIMULATION_PASS_NOT_FOUND", "The Simulation Pass was not found"),
     EXECUTION_SESSION_ACTIVE(HttpStatus.CONFLICT, "EXECUTION_SESSION_ACTIVE", "The Session already has an active Execution"),
     BLOCK_PROGRAM_INVALID(HttpStatus.BAD_REQUEST, "BLOCK_PROGRAM_INVALID", "The Block Program is invalid"),
+    MISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "MISSION_NOT_FOUND", "The Mission was not found"),
 }
