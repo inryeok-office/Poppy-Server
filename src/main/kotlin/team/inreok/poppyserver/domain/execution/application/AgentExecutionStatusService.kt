@@ -21,6 +21,27 @@ class AgentExecutionStatusService(
     private val robotRepository: RobotRepository,
     private val executionStatusEventPublisher: ExecutionStatusEventPublisher,
 ) {
+    @Transactional(readOnly = true)
+    fun find(agentId: UUID, executionId: UUID, robotId: UUID): ExecutionStatusReport {
+        agentRepository.findById(agentId)
+            ?: throw ApplicationException(ErrorCode.AGENT_NOT_FOUND)
+        val execution = executionRepository.findById(executionId)
+            ?: throw ApplicationException(ErrorCode.EXECUTION_NOT_FOUND)
+        val robot = robotRepository.findById(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (robot.agentId != agentId) {
+            throw ApplicationException(ErrorCode.AGENT_ROBOT_BINDING_MISMATCH)
+        }
+        if (execution.assignedRobotId != robotId) {
+            throw ApplicationException(ErrorCode.EXECUTION_ROBOT_MISMATCH)
+        }
+        return ExecutionStatusReport(
+            executionId = execution.id,
+            robotId = robotId,
+            status = execution.status,
+        )
+    }
+
     @Transactional
     fun report(agentId: UUID, executionId: UUID, command: ReportExecutionStatusCommand): ExecutionStatusReport {
         agentRepository.findById(agentId)
@@ -83,6 +104,7 @@ class AgentExecutionStatusService(
                 ExecutionStatus.RUNNING -> execution.start()
                 ExecutionStatus.COMPLETED -> execution.complete()
                 ExecutionStatus.FAILED -> execution.fail()
+                ExecutionStatus.CANCELLED -> execution.cancel()
                 else -> throw ApplicationException(ErrorCode.EXECUTION_STATUS_UNSUPPORTED)
             }
         } catch (_: IllegalStateException) {
@@ -100,12 +122,14 @@ enum class ReportExecutionStatus {
     RUNNING,
     COMPLETED,
     FAILED,
+    CANCELLED,
     ;
 
     fun toExecutionStatus(): ExecutionStatus = when (this) {
         RUNNING -> ExecutionStatus.RUNNING
         COMPLETED -> ExecutionStatus.COMPLETED
         FAILED -> ExecutionStatus.FAILED
+        CANCELLED -> ExecutionStatus.CANCELLED
     }
 }
 
@@ -115,4 +139,5 @@ data class ExecutionStatusReport(
     val status: ExecutionStatus,
 )
 
-private fun ExecutionStatus.isTerminal(): Boolean = this == ExecutionStatus.COMPLETED || this == ExecutionStatus.FAILED
+private fun ExecutionStatus.isTerminal(): Boolean = this == ExecutionStatus.COMPLETED ||
+    this == ExecutionStatus.FAILED || this == ExecutionStatus.CANCELLED

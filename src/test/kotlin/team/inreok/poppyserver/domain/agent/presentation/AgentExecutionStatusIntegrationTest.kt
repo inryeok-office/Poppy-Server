@@ -10,6 +10,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -93,6 +94,41 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
 
         assertEquals(ExecutionStatus.FAILED, executionRepository.findById(execution.id)?.status)
         assertEquals(null, robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    fun `Agent가 CANCELLED terminal status를 보고하고 Robot 점유를 해제한다`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.RUNNING)
+        val robot = saveRobot(agent.id, execution.id)
+
+        report(agent.id, execution.id, robot.id, "CANCELLED")
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+
+        assertEquals(ExecutionStatus.CANCELLED, executionRepository.findById(execution.id)?.status)
+        assertEquals(null, robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    fun `Agent가 자신의 Execution 상태를 조회한다`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.CANCELLED)
+        val robot = saveRobot(agent.id, null)
+        inTransaction {
+            execution.bindRobot(robot.id)
+            executionRepository.save(execution)
+        }
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/${agent.id}/executions/${execution.id}/status")
+                .param("robotId", robot.id.toString())
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.executionId").value(execution.id.toString()))
+            .andExpect(jsonPath("$.data.robotId").value(robot.id.toString()))
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
     }
 
     @Test
@@ -251,8 +287,8 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.error.code").value("EXECUTION_STATUS_TRANSITION_INVALID"))
 
         report(agent.id, queuedExecution.id, queuedRobot.id, "CANCELLED")
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.error.code").value("EXECUTION_STATUS_UNSUPPORTED"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
     }
 
     @Test

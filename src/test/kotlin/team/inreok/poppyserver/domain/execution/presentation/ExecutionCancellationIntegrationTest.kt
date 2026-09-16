@@ -94,15 +94,15 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
-    fun `RUNNING Execution은 체험자 취소를 거부한다`() {
+    fun `RUNNING Execution을 CANCELLED로 변경하고 Robot 점유를 해제한다`() {
         val fixture = saveAssignedFixture(ExecutionStatus.RUNNING)
 
         cancel(fixture.execution.id)
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.error.code").value("EXECUTION_CANCELLATION_NOT_ALLOWED"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.status").value("CANCELLED"))
 
-        assertEquals(ExecutionStatus.RUNNING, executionRepository.findById(fixture.execution.id)?.status)
-        assertEquals(fixture.execution.id, robotRepository.findById(fixture.robot.id)?.currentExecutionId)
+        assertEquals(ExecutionStatus.CANCELLED, executionRepository.findById(fixture.execution.id)?.status)
+        assertNull(robotRepository.findById(fixture.robot.id)?.currentExecutionId)
     }
 
     @Test
@@ -217,13 +217,9 @@ class ExecutionCancellationIntegrationTest : PostgresIntegrationTest() {
         val finalExecution = requireNotNull(executionRepository.findById(fixture.execution.id))
         val finalRobot = requireNotNull(robotRepository.findById(fixture.robot.id))
 
-        assertEquals(1, results.count { it.status != null })
-        assertEquals(true, finalExecution.status == ExecutionStatus.CANCELLED || finalExecution.status == ExecutionStatus.RUNNING)
-        if (finalExecution.status == ExecutionStatus.CANCELLED) {
-            assertNull(finalRobot.currentExecutionId)
-        } else {
-            assertEquals(fixture.execution.id, finalRobot.currentExecutionId)
-        }
+        assertEquals(ExecutionStatus.CANCELLED, finalExecution.status)
+        assertNull(finalRobot.currentExecutionId)
+        assertEquals(1, results.count { it.status == ExecutionStatus.CANCELLED })
     }
 
     @Test
