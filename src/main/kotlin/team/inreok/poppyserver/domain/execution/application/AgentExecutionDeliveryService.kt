@@ -33,11 +33,17 @@ class AgentExecutionDeliveryService(
         if (assignment.executionStatus != ExecutionStatus.ASSIGNED) {
             throw ApplicationException(ErrorCode.EXECUTION_DELIVERY_INVARIANT_VIOLATED)
         }
+        val commandPayload = assignment.compiledCommandPayload
+            ?: throw ApplicationException(ErrorCode.EXECUTION_DELIVERY_INVARIANT_VIOLATED)
+        if (commandPayload.isBlank()) {
+            throw ApplicationException(ErrorCode.EXECUTION_DELIVERY_INVARIANT_VIOLATED)
+        }
         return AgentExecutionDelivery(
             executionId = executionId,
             robotId = assignment.robotId,
             status = assignment.executionStatus,
             protocolVersion = PROTOCOL_VERSION,
+            commandPayload = commandPayload,
         )
     }
 
@@ -51,4 +57,5 @@ data class AgentExecutionDelivery(
     val robotId: UUID,
     val status: ExecutionStatus,
     val protocolVersion: Int,
+    val commandPayload: String,
 )

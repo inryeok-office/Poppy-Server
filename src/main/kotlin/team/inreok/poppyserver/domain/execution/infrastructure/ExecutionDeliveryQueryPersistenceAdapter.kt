@@ -21,7 +21,8 @@ class ExecutionDeliveryQueryPersistenceAdapter(
                 robot.agent_id,
                 robot.current_execution_id,
                 execution.id as execution_id,
-                execution.status as execution_status
+                execution.status as execution_status,
+                execution.compiled_command_payload
             from robots robot
             left join executions execution on execution.id = robot.current_execution_id
             where robot.id = :robotId
@@ -34,6 +35,7 @@ class ExecutionDeliveryQueryPersistenceAdapter(
                 currentExecutionId = resultSet.getObject("current_execution_id", UUID::class.java),
                 executionId = resultSet.getObject("execution_id", UUID::class.java),
                 executionStatus = resultSet.getString("execution_status")?.let(ExecutionStatus::valueOf),
+                compiledCommandPayload = resultSet.getString("compiled_command_payload"),
             )
         }
         .singleOrNull()

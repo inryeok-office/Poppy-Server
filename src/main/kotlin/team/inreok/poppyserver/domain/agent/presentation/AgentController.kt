@@ -171,6 +171,7 @@ data class AgentExecutionResponse(
     val robotId: UUID,
     val status: String,
     val protocolVersion: Int,
+    val commandPayload: String,
 )
 
 data class AgentExecutionStatusRequest(
@@ -208,6 +209,7 @@ private fun AgentExecutionDelivery.toResponse(): AgentExecutionResponse = AgentE
     robotId = robotId,
     status = status.name,
     protocolVersion = protocolVersion,
+    commandPayload = commandPayload,
 )
 
 private fun ExecutionStatusReport.toResponse(): AgentExecutionStatusResponse = AgentExecutionStatusResponse(

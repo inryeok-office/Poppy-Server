@@ -63,7 +63,20 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.data.execution.robotId").value(robot.id.toString()))
             .andExpect(jsonPath("$.data.execution.status").value("ASSIGNED"))
             .andExpect(jsonPath("$.data.execution.protocolVersion").value(1))
+            .andExpect(jsonPath("$.data.execution.commandPayload").value(COMMAND_PAYLOAD))
             .andExpect(jsonPath("$.error").doesNotExist())
+    }
+
+    @Test
+    fun `compiled snapshot이 없는 ASSIGNED Execution은 command payload 없이 전달하지 않는다`() {
+        val agent = saveAgent()
+        val execution = saveLegacyAssignedExecution()
+        val robot = saveBoundRobot(agent.id, execution.id)
+
+        mockMvc.perform(nextRequest(agent.id, robot.id))
+            .andExpect(status().isInternalServerError)
+            .andExpect(jsonPath("$.error.code").value("EXECUTION_DELIVERY_INVARIANT_VIOLATED"))
+            .andExpect(jsonPath("$.data").doesNotExist())
     }
 
     @Test
@@ -182,6 +195,16 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
     }
 
     private fun saveAssignedExecution(): Execution = inTransaction {
+        executionRepository.save(
+            Execution.restore(
+                id = UUID.randomUUID(),
+                status = ExecutionStatus.ASSIGNED,
+                compiledCommandPayload = COMMAND_PAYLOAD,
+            ),
+        )
+    }
+
+    private fun saveLegacyAssignedExecution(): Execution = inTransaction {
         executionRepository.save(Execution.create().apply { assign() })
     }
 
@@ -200,6 +223,7 @@ class AgentExecutionDeliveryIntegrationTest : PostgresIntegrationTest() {
 
     companion object {
         private const val TEST_TOKEN = "test-agent-token"
+        private const val COMMAND_PAYLOAD = "{\"protocolVersion\":1,\"commands\":[]}"
 
         @DynamicPropertySource
         @JvmStatic
