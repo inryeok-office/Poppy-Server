@@ -239,6 +239,16 @@ class RobotHeartbeatTimeoutServiceTest {
                 !it.occupied
         }
 
+        override fun findAvailableForAllocationCandidateIds(): List<UUID> = robots.values
+            .filter {
+                it.active &&
+                    it.connectionStatus == RobotConnectionStatus.ONLINE &&
+                    it.operationStatus == RobotOperationStatus.READY &&
+                    !it.occupied
+            }
+            .map { it.id }
+            .sorted()
+
         override fun findAllById(ids: Collection<UUID>): List<Robot> = ids.mapNotNull(robots::get)
 
         override fun saveAll(robots: Collection<Robot>): List<Robot> = robots.map(::save)

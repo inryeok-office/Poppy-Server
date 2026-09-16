@@ -4,14 +4,20 @@ import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
+import team.inreok.poppyserver.domain.robot.application.RobotCapabilityMatcher
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.robot.model.Robot
+import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
+import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 
 @Service
 @ConditionalOnBean(ExecutionRepository::class, RobotRepository::class)
 class ExecutionAllocationService(
     private val executionRepository: ExecutionRepository,
     private val robotRepository: RobotRepository,
+    private val robotCapabilityMatcher: RobotCapabilityMatcher,
     private val executionStatusEventPublisher: ExecutionStatusEventPublisher,
 ) {
     @Transactional
@@ -22,7 +28,7 @@ class ExecutionAllocationService(
             "QUEUED 상태의 Execution만 배정할 수 있습니다"
         }
 
-        val robot = robotRepository.findAvailableForAllocation() ?: return null
+        val robot = findAllocatableRobot(execution) ?: return null
         execution.assignToRobot(robot.id)
         robot.assignExecution(execution.id)
         executionRepository.save(execution)
@@ -37,5 +43,23 @@ class ExecutionAllocationService(
             )
         }
         return robot.id
+    }
+
+    private fun findAllocatableRobot(execution: Execution): Robot? {
+        if (execution.compiledCommandPayload == null) {
+            return robotRepository.findAvailableForAllocation()
+        }
+
+        return robotRepository
+            .findAvailableForAllocationCandidateIds()
+            .asSequence()
+            .mapNotNull { candidateId -> robotRepository.findByIdForStatusUpdate(candidateId) }
+            .firstOrNull { candidate ->
+                candidate.active &&
+                    candidate.connectionStatus == RobotConnectionStatus.ONLINE &&
+                    candidate.operationStatus == RobotOperationStatus.READY &&
+                    !candidate.occupied &&
+                    robotCapabilityMatcher.matches(candidate.capabilities.values, execution.requiredCapabilities)
+            }
     }
 }

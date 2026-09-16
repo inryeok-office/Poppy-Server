@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.context.annotation.Bean
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.robot.application.RobotCapabilityMatcher
 
 class ExecutionAllocationServiceContextTest {
     @Test
@@ -39,6 +40,9 @@ class ExecutionAllocationServiceContextTest {
 
         @Bean
         fun robotRepository(): RobotRepository = mock(RobotRepository::class.java)
+
+        @Bean
+        fun robotCapabilityMatcher(): RobotCapabilityMatcher = RobotCapabilityMatcher()
 
         @Bean
         fun executionStatusEventPublisher(): ExecutionStatusEventPublisher =
