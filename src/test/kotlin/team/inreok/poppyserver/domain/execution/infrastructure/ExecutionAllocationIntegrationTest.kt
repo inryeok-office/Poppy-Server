@@ -17,7 +17,9 @@ import team.inreok.poppyserver.domain.execution.application.ExecutionRepository
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.robot.model.CapabilitySupportStatus
 import team.inreok.poppyserver.domain.robot.model.Robot
+import team.inreok.poppyserver.domain.robot.model.RobotCapability
 import team.inreok.poppyserver.domain.robot.model.RobotConnectionStatus
 import team.inreok.poppyserver.domain.robot.model.RobotOperationStatus
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
@@ -222,6 +224,137 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
         }
     }
 
+    @Test
+    @Transactional
+    fun `snapshot capability matching skips incompatible candidate`() {
+        val execution = executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE", "COMMAND_TURN")))
+        val robots = inTransaction {
+            val candidates = listOf(
+                robotRepository.save(availableRobot()),
+                robotRepository.save(availableRobot()),
+            ).sortedBy { it.id }
+            candidates[0].replaceCapabilities(
+                listOf(RobotCapability("COMMAND_MOVE", CapabilitySupportStatus.VERIFIED)),
+            )
+            candidates[1].replaceCapabilities(
+                listOf(
+                    RobotCapability("COMMAND_MOVE", CapabilitySupportStatus.VERIFIED),
+                    RobotCapability("COMMAND_TURN", CapabilitySupportStatus.VERIFIED),
+                ),
+            )
+            candidates.map(robotRepository::save)
+        }
+
+        assertEquals(robots[1].id, allocationService.allocate(execution.id))
+        assertNull(robotRepository.findById(robots[0].id)?.currentExecutionId)
+        assertEquals(execution.id, robotRepository.findById(robots[1].id)?.currentExecutionId)
+    }
+
+    @Test
+    @Transactional
+    fun `unverified capability does not satisfy snapshot requirement`() {
+        val execution = executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE")))
+        val robot = robotRepository.save(
+            availableRobot(
+                capabilities = listOf(RobotCapability("COMMAND_MOVE", CapabilitySupportStatus.UNVERIFIED)),
+            ),
+        )
+
+        assertNull(allocationService.allocate(execution.id))
+        assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
+        assertNull(robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    @Transactional
+    fun `empty snapshot requirements use an available robot`() {
+        val execution = executionRepository.save(snapshotExecution(emptySet()))
+        val robot = robotRepository.save(availableRobot())
+
+        assertEquals(robot.id, allocationService.allocate(execution.id))
+    }
+
+    @Test
+    @Transactional
+    fun `unsupported capability does not satisfy snapshot requirement`() {
+        val execution = executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE")))
+        val robot = robotRepository.save(
+            availableRobot(
+                capabilities = listOf(RobotCapability("COMMAND_MOVE", CapabilitySupportStatus.UNSUPPORTED)),
+            ),
+        )
+
+        assertNull(allocationService.allocate(execution.id))
+        assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
+        assertNull(robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    @Transactional
+    fun `missing capability does not satisfy snapshot requirement`() {
+        val execution = executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE")))
+        val robot = robotRepository.save(availableRobot())
+
+        assertNull(allocationService.allocate(execution.id))
+        assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
+        assertNull(robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    @Transactional
+    fun `snapshot matching keeps the existing robot eligibility rules`() {
+        val robots = listOf(
+            robotRepository.save(robot(currentExecutionId = UUID.randomUUID())),
+            robotRepository.save(robot(operationStatus = RobotOperationStatus.UNAVAILABLE)),
+            robotRepository.save(robot(connectionStatus = RobotConnectionStatus.OFFLINE)),
+            robotRepository.save(robot().apply { deactivate() }),
+        )
+        val executions = robots.map {
+            executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE")))
+        }
+
+        executions.forEach { execution -> assertNull(allocationService.allocate(execution.id)) }
+
+        executions.forEach { execution ->
+            assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
+        }
+        robots.forEach { robot -> assertNull(robotRepository.findById(robot.id)?.currentExecutionId) }
+    }
+
+    @Test
+    @Transactional
+    fun `verified required capability allows unrelated extra capability`() {
+        val execution = executionRepository.save(snapshotExecution(setOf("COMMAND_MOVE")))
+        val robot = robotRepository.save(
+            availableRobot(
+                capabilities = listOf(
+                    RobotCapability("COMMAND_MOVE", CapabilitySupportStatus.VERIFIED),
+                    RobotCapability("SOME_FUTURE_FEATURE", CapabilitySupportStatus.VERIFIED),
+                ),
+            ),
+        )
+
+        assertEquals(robot.id, allocationService.allocate(execution.id))
+    }
+
+    @Test
+    fun `concurrent snapshot allocations do not double assign one robot`() {
+        val fixture = inTransaction {
+            val robot = robotRepository.save(availableRobot())
+            val executions = listOf(
+                executionRepository.save(snapshotExecution(emptySet())),
+                executionRepository.save(snapshotExecution(emptySet())),
+            )
+            AllocationFixture(robot.id, executions.map { it.id })
+        }
+
+        val results = allocateConcurrently(fixture.executionIds)
+
+        assertEquals(1, results.count { it != null })
+        assertEquals(1, fixture.executionIds.count { executionRepository.findById(it)?.status == ExecutionStatus.ASSIGNED })
+        assertNotNull(robotRepository.findById(fixture.robotId)?.currentExecutionId)
+    }
+
     private fun allocateConcurrently(
         executionIds: List<UUID>,
         allowRejectedExecution: Boolean = false,
@@ -250,15 +383,26 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
         }
     }
 
-    private fun availableRobot(): Robot = robot()
+    private fun availableRobot(
+        capabilities: Collection<RobotCapability> = emptyList(),
+    ): Robot = robot(capabilities = capabilities)
+
+    private fun snapshotExecution(requiredCapabilities: Set<String>): Execution = Execution.create(
+        sessionId = UUID.randomUUID(),
+        blockVersion = 1,
+        compiledCommandPayload = "{\"protocolVersion\":1,\"commands\":[]}",
+        requiredCapabilities = requiredCapabilities,
+    )
 
     private fun robot(
         connectionStatus: RobotConnectionStatus = RobotConnectionStatus.ONLINE,
         operationStatus: RobotOperationStatus = RobotOperationStatus.READY,
         currentExecutionId: UUID? = null,
+        capabilities: Collection<RobotCapability> = emptyList(),
     ): Robot = Robot.register(
         alias = "allocation-${UUID.randomUUID()}",
         model = "GO2",
+        capabilities = capabilities,
     ).apply {
         if (connectionStatus == RobotConnectionStatus.ONLINE) {
             applyHeartbeat(
