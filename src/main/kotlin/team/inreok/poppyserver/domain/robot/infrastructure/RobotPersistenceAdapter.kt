@@ -44,6 +44,12 @@ class RobotPersistenceAdapter(
             )
             ?.toDomain()
 
+    override fun findAvailableForAllocationCandidateIds(): List<UUID> =
+        robotJpaRepository.findAvailableForAllocationCandidateIds(
+            connectionStatus = RobotConnectionStatus.ONLINE,
+            operationStatus = RobotOperationStatus.READY,
+        )
+
     override fun findAllById(ids: Collection<UUID>): List<Robot> =
         robotJpaRepository.findAllById(ids).map { it.toDomain() }
 

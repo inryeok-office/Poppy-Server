@@ -36,6 +36,19 @@ interface RobotJpaRepository : JpaRepository<RobotEntity, UUID> {
         operationStatus: RobotOperationStatus,
     ): RobotEntity?
 
+    @Query(
+        "select robot.id from RobotEntity robot " +
+            "where robot.active = true " +
+            "and robot.connectionStatus = :connectionStatus " +
+            "and robot.operationStatus = :operationStatus " +
+            "and robot.currentExecutionId is null " +
+            "order by robot.id",
+    )
+    fun findAvailableForAllocationCandidateIds(
+        @Param("connectionStatus") connectionStatus: RobotConnectionStatus,
+        @Param("operationStatus") operationStatus: RobotOperationStatus,
+    ): List<UUID>
+
     fun findAllByOperationStatus(operationStatus: RobotOperationStatus): List<RobotEntity>
 
     fun findAllByConnectionStatus(connectionStatus: RobotConnectionStatus): List<RobotEntity>

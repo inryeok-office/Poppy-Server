@@ -51,11 +51,9 @@ class ExecutionAllocationService(
         }
 
         return robotRepository
-            .findAll(RobotOperationStatus.READY, RobotConnectionStatus.ONLINE)
+            .findAvailableForAllocationCandidateIds()
             .asSequence()
-            .filter { it.active && !it.occupied }
-            .sortedBy { it.id }
-            .mapNotNull { candidate -> robotRepository.findByIdForStatusUpdate(candidate.id) }
+            .mapNotNull { candidateId -> robotRepository.findByIdForStatusUpdate(candidateId) }
             .firstOrNull { candidate ->
                 candidate.active &&
                     candidate.connectionStatus == RobotConnectionStatus.ONLINE &&

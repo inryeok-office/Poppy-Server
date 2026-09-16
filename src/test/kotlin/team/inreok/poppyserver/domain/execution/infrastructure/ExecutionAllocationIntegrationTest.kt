@@ -303,8 +303,9 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
     @Test
     @Transactional
     fun `snapshot matching keeps the existing robot eligibility rules`() {
+        val occupiedExecutionId = UUID.randomUUID()
         val robots = listOf(
-            robotRepository.save(robot(currentExecutionId = UUID.randomUUID())),
+            robotRepository.save(robot(currentExecutionId = occupiedExecutionId)),
             robotRepository.save(robot(operationStatus = RobotOperationStatus.UNAVAILABLE)),
             robotRepository.save(robot(connectionStatus = RobotConnectionStatus.OFFLINE)),
             robotRepository.save(robot().apply { deactivate() }),
@@ -318,7 +319,7 @@ class ExecutionAllocationIntegrationTest : PostgresIntegrationTest() {
         executions.forEach { execution ->
             assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
         }
-        robots.forEach { robot -> assertNull(robotRepository.findById(robot.id)?.currentExecutionId) }
+        assertEquals(occupiedExecutionId, robotRepository.findById(robots[0].id)?.currentExecutionId)
     }
 
     @Test
