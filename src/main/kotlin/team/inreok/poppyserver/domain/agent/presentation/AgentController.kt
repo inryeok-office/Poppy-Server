@@ -89,6 +89,15 @@ class AgentController(
     ): ApiResponse<AgentExecutionStatusResponse> = ApiResponse.success(
         agentExecutionStatusService.report(agentId, executionId, request.toCommand()).toResponse(),
     )
+
+    @GetMapping("/{agentId}/executions/{executionId}/status")
+    fun getExecutionStatus(
+        @PathVariable agentId: UUID,
+        @PathVariable executionId: UUID,
+        @RequestParam robotId: UUID,
+    ): ApiResponse<AgentExecutionStatusResponse> = ApiResponse.success(
+        agentExecutionStatusService.find(agentId, executionId, robotId).toResponse(),
+    )
 }
 
 data class AgentRegistrationRequest(

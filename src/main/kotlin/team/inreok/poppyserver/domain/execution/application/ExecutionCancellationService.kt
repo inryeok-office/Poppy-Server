@@ -40,7 +40,7 @@ class ExecutionCancellationService(
             ExecutionStatus.CANCELLED -> execution.toCancellationResult()
             ExecutionStatus.QUEUED -> cancelQueued(execution)
             ExecutionStatus.ASSIGNED -> cancelAssigned(execution)
-            ExecutionStatus.RUNNING,
+            ExecutionStatus.RUNNING -> cancelAssigned(execution)
             ExecutionStatus.COMPLETED,
             ExecutionStatus.FAILED,
             -> throw ApplicationException(ErrorCode.EXECUTION_CANCELLATION_NOT_ALLOWED)
