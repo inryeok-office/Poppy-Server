@@ -3,6 +3,7 @@ package team.inreok.poppyserver.global.error
 import org.springframework.http.ResponseEntity
 import org.springframework.http.MediaType
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -36,6 +37,23 @@ class GlobalExceptionHandler {
         val errorCode = ErrorCode.INVALID_INPUT
         return ResponseEntity.status(errorCode.status).contentType(MediaType.APPLICATION_JSON)
             .body(ApiResponse.failure(ApiErrorBody(code = errorCode.code, message = errorCode.message, fieldErrors = fieldErrors)))
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    fun handleMethodArgumentTypeMismatch(
+        exception: MethodArgumentTypeMismatchException,
+    ): ResponseEntity<ApiResponse<Nothing>> {
+        val errorCode = ErrorCode.INVALID_INPUT
+        return ResponseEntity.status(errorCode.status).contentType(MediaType.APPLICATION_JSON)
+            .body(
+                ApiResponse.failure(
+                    ApiErrorBody(
+                        code = errorCode.code,
+                        message = errorCode.message,
+                        fieldErrors = listOf(FieldErrorItem(field = exception.name, reason = errorCode.message)),
+                    ),
+                ),
+            )
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)

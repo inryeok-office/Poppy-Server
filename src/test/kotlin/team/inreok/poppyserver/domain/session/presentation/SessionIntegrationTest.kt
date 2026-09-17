@@ -113,6 +113,20 @@ class SessionIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `잘못된 sessionId 형식은 COMMON_400으로 응답한다`() {
+        mockMvc.perform(
+            post("/api/v1/sessions/not-a-uuid/block-revisions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.data").value(null))
+            .andExpect(jsonPath("$.error.code").value("COMMON_400"))
+            .andExpect(jsonPath("$.error.fieldErrors[0].field").value("sessionId"))
+    }
+
+    @Test
     fun `Block Revision HTTP API는 opaque JSON을 저장하고 version을 반환한다`() {
         val session = sessionService.createSession()
         val document = validBlockProgram("http")
