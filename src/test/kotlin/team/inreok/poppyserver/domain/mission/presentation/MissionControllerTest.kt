@@ -66,4 +66,16 @@ class MissionControllerTest {
             .andExpect(jsonPath("$.data").value(null))
             .andExpect(jsonPath("$.error.code").value(ErrorCode.MISSION_NOT_FOUND.code))
     }
+
+    @Test
+    fun `잘못된 missionId 형식은 COMMON_400으로 응답한다`() {
+        mockMvc.perform(
+            get("/api/v1/missions/not-a-uuid").accept(MediaType.APPLICATION_JSON),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.data").value(null))
+            .andExpect(jsonPath("$.error.code").value(ErrorCode.INVALID_INPUT.code))
+            .andExpect(jsonPath("$.error.fieldErrors[0].field").value("missionId"))
+    }
 }

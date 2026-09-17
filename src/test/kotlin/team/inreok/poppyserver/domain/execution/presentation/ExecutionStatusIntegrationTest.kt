@@ -139,6 +139,18 @@ class ExecutionStatusIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `잘못된 executionId 형식은 COMMON_400으로 응답한다`() {
+        mockMvc.perform(
+            get("/api/v1/executions/not-a-uuid"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.data").value(null))
+            .andExpect(jsonPath("$.error.code").value("COMMON_400"))
+            .andExpect(jsonPath("$.error.fieldErrors[0].field").value("executionId"))
+    }
+
+    @Test
     fun `missing or invalid token is unauthorized`() {
         val session = sessionWithRevision()
         val execution = saveExecution(Execution.create(session.sessionId, 1))
