@@ -319,6 +319,100 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
     }
 
+    @Test
+    fun `agent can discover active execution for bound robot`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.RUNNING)
+        val robot = saveRobot(agent.id, execution.id)
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/${agent.id}/robots/${robot.id}/active-execution")
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.activeExecution.executionId").value(execution.id.toString()))
+            .andExpect(jsonPath("$.data.activeExecution.robotId").value(robot.id.toString()))
+            .andExpect(jsonPath("$.data.activeExecution.status").value("RUNNING"))
+    }
+
+    @Test
+    fun `active execution discovery returns null when robot is idle`() {
+        val agent = saveAgent()
+        val robot = saveRobot(agent.id, null)
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/${agent.id}/robots/${robot.id}/active-execution")
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.activeExecution").doesNotExist())
+    }
+
+    @Test
+    fun `agent restart recovery fails active execution and releases robot`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.RUNNING)
+        val robot = saveRobot(agent.id, execution.id)
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/${agent.id}/robots/${robot.id}/active-execution/recover")
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.executionId").value(execution.id.toString()))
+            .andExpect(jsonPath("$.data.previousStatus").value("RUNNING"))
+            .andExpect(jsonPath("$.data.status").value("FAILED"))
+            .andExpect(jsonPath("$.data.action").value("RECOVERED_AS_FAILED"))
+
+        assertEquals(ExecutionStatus.FAILED, executionRepository.findById(execution.id)?.status)
+        assertEquals(null, robotRepository.findById(robot.id)?.currentExecutionId)
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/${agent.id}/robots/${robot.id}/active-execution/recover")
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.action").value("NO_ACTIVE_EXECUTION"))
+    }
+
+    @Test
+    fun `agent restart recovery fails assigned execution and releases robot`() {
+        val agent = saveAgent()
+        val execution = saveExecution(ExecutionStatus.ASSIGNED)
+        val robot = saveRobot(agent.id, execution.id)
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/${agent.id}/robots/${robot.id}/active-execution/recover")
+                .header("X-Agent-Token", agent.id.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.executionId").value(execution.id.toString()))
+            .andExpect(jsonPath("$.data.previousStatus").value("ASSIGNED"))
+            .andExpect(jsonPath("$.data.status").value("FAILED"))
+            .andExpect(jsonPath("$.data.action").value("RECOVERED_AS_FAILED"))
+
+        assertEquals(ExecutionStatus.FAILED, executionRepository.findById(execution.id)?.status)
+        assertEquals(null, robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
+    @Test
+    fun `unbound agent cannot recover another agents execution`() {
+        val owner = saveAgent()
+        val requester = saveAgent()
+        val execution = saveExecution(ExecutionStatus.ASSIGNED)
+        val robot = saveRobot(owner.id, execution.id)
+
+        mockMvc.perform(
+            post("/api/v1/internal/agents/${requester.id}/robots/${robot.id}/active-execution/recover")
+                .header("X-Agent-Token", requester.id.toString()),
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.error.code").value("AGENT_ROBOT_BINDING_MISMATCH"))
+
+        assertEquals(ExecutionStatus.ASSIGNED, executionRepository.findById(execution.id)?.status)
+        assertEquals(execution.id, robotRepository.findById(robot.id)?.currentExecutionId)
+    }
+
     private fun report(agentId: UUID, executionId: UUID, robotId: UUID, status: String) = mockMvc.perform(
         post("/api/v1/internal/agents/$agentId/executions/$executionId/status")
             .header("X-Agent-Token", agentId.toString())
@@ -397,6 +491,10 @@ class AgentExecutionStatusIntegrationTest : PostgresIntegrationTest() {
         @JvmStatic
         fun registerProperties(registry: DynamicPropertyRegistry) {
             registry.add("poppy.agent.token") { TEST_TOKEN }
+            // Keep the fixed historical heartbeat fixture out of the timeout
+            // scheduler while this class tests explicit Agent lifecycle calls.
+            registry.add("poppy.agent.heartbeat-timeout-seconds") { 3600 }
+            registry.add("poppy.agent.heartbeat-scan-interval-milliseconds") { 3600000 }
         }
     }
 }

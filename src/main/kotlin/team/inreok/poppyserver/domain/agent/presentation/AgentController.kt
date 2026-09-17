@@ -30,6 +30,8 @@ import team.inreok.poppyserver.domain.agent.model.Agent
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionDelivery
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionDeliveryService
 import team.inreok.poppyserver.domain.execution.application.AgentExecutionStatusService
+import team.inreok.poppyserver.domain.execution.application.ActiveExecutionReport
+import team.inreok.poppyserver.domain.execution.application.ExecutionRecoveryReport
 import team.inreok.poppyserver.domain.execution.application.ExecutionStatusReport
 import team.inreok.poppyserver.domain.execution.application.ReportExecutionStatus
 import team.inreok.poppyserver.domain.execution.application.ReportExecutionStatusCommand
@@ -97,6 +99,24 @@ class AgentController(
         @RequestParam robotId: UUID,
     ): ApiResponse<AgentExecutionStatusResponse> = ApiResponse.success(
         agentExecutionStatusService.find(agentId, executionId, robotId).toResponse(),
+    )
+
+    @GetMapping("/{agentId}/robots/{robotId}/active-execution")
+    fun getActiveExecution(
+        @PathVariable agentId: UUID,
+        @PathVariable robotId: UUID,
+    ): ApiResponse<AgentActiveExecutionResponse> = ApiResponse.success(
+        AgentActiveExecutionResponse(
+            activeExecution = agentExecutionStatusService.findActive(agentId, robotId)?.toResponse(),
+        ),
+    )
+
+    @PostMapping("/{agentId}/robots/{robotId}/active-execution/recover")
+    fun recoverActiveExecution(
+        @PathVariable agentId: UUID,
+        @PathVariable robotId: UUID,
+    ): ApiResponse<AgentExecutionRecoveryResponse> = ApiResponse.success(
+        agentExecutionStatusService.recoverActive(agentId, robotId).toResponse(),
     )
 }
 
@@ -206,6 +226,24 @@ data class AgentExecutionStatusResponse(
     val status: String,
 )
 
+data class AgentActiveExecutionResponse(
+    val activeExecution: ActiveExecutionResponse?,
+)
+
+data class ActiveExecutionResponse(
+    val executionId: UUID,
+    val robotId: UUID,
+    val status: String,
+)
+
+data class AgentExecutionRecoveryResponse(
+    val robotId: UUID,
+    val executionId: UUID?,
+    val previousStatus: String?,
+    val status: String?,
+    val action: String,
+)
+
 private fun AgentRegistrationResult.toResponse(): AgentRegistrationResponse = AgentRegistrationResponse(
     agentId = agent.id,
     registeredAt = agent.registeredAt.toUtcLocalDateTime(),
@@ -225,6 +263,20 @@ private fun ExecutionStatusReport.toResponse(): AgentExecutionStatusResponse = A
     executionId = executionId,
     robotId = robotId,
     status = status.name,
+)
+
+private fun ActiveExecutionReport.toResponse(): ActiveExecutionResponse = ActiveExecutionResponse(
+    executionId = executionId,
+    robotId = robotId,
+    status = status.name,
+)
+
+private fun ExecutionRecoveryReport.toResponse(): AgentExecutionRecoveryResponse = AgentExecutionRecoveryResponse(
+    robotId = robotId,
+    executionId = executionId,
+    previousStatus = previousStatus?.name,
+    status = status?.name,
+    action = action.name,
 )
 
 private fun Instant.toUtcLocalDateTime(): LocalDateTime = atZone(ZoneOffset.UTC).toLocalDateTime()

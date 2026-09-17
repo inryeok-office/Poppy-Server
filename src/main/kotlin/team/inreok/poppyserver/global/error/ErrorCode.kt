@@ -29,6 +29,7 @@ enum class ErrorCode(
     EXECUTION_ROBOT_MISMATCH(HttpStatus.CONFLICT, "EXECUTION_ROBOT_MISMATCH", "The Execution is not assigned to the Robot"),
     EXECUTION_CANCELLATION_NOT_ALLOWED(HttpStatus.CONFLICT, "EXECUTION_CANCELLATION_NOT_ALLOWED", "The Execution cannot be cancelled in its current status"),
     EXECUTION_CANCELLATION_INVARIANT_VIOLATED(HttpStatus.INTERNAL_SERVER_ERROR, "EXECUTION_CANCELLATION_INVARIANT_VIOLATED", "The Execution cancellation assignment is invalid"),
+    EXECUTION_RECOVERY_INVARIANT_VIOLATED(HttpStatus.INTERNAL_SERVER_ERROR, "EXECUTION_RECOVERY_INVARIANT_VIOLATED", "The Execution recovery assignment is invalid"),
     EXECUTION_STATUS_UNSUPPORTED(HttpStatus.BAD_REQUEST, "EXECUTION_STATUS_UNSUPPORTED", "The Execution status is unsupported"),
     EXECUTION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "EXECUTION_STATUS_TRANSITION_INVALID", "The Execution status transition is invalid"),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", "The Session was not found"),
