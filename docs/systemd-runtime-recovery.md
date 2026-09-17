@@ -66,8 +66,6 @@ The temporary unit is derived from the production contract:
 - Compose foreground `up --no-build --abort-on-container-exit --exit-code-from app`
 - Compose `stop --timeout 30` for graceful service stop
 - `Restart=on-failure`, `RestartSec=5s`
-- `RestartPreventExitStatus=SIGTERM 130 143` prevents a graceful operator
-  stop from being mistaken for a crash; app crash exit codes remain restartable.
 - `SuccessExitStatus=130 143` leaves a normal Compose stop `inactive` rather
   than `failed`, while an app crash exit remains a failure.
 - `KillMode=control-group`, `TimeoutStopSec=45s`

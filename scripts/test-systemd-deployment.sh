@@ -42,7 +42,6 @@ if [ -f "$service_file" ]; then
   require_match "$service_file" '^ExecStop=/usr/bin/docker compose --env-file /etc/poppy-server/poppy-server\.env stop --timeout 30$'
   require_match "$service_file" '^Restart=on-failure$'
   require_match "$service_file" '^RestartSec=5s$'
-  require_match "$service_file" '^RestartPreventExitStatus=SIGTERM 130 143$'
   require_match "$service_file" '^SuccessExitStatus=130 143$'
   require_match "$service_file" '^KillSignal=SIGTERM$'
   require_match "$service_file" '^WantedBy=multi-user\.target$'

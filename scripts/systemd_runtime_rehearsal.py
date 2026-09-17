@@ -50,6 +50,8 @@ class Rehearsal:
     env_file: Path
     unit_file: Path
     docker_unit_available: bool = False
+    journal_cursor: str | None = None
+    journal_since: str = ""
     unit_installed: bool = False
     compose_started: bool = False
 
@@ -293,7 +295,6 @@ ExecStart=/usr/bin/docker compose --project-name {rehearsal.project} --file {reh
 ExecStop=/usr/bin/docker compose --project-name {rehearsal.project} --file {rehearsal.compose_file} --env-file {rehearsal.env_file} stop --timeout 30
 Restart=on-failure
 RestartSec=5s
-RestartPreventExitStatus=SIGTERM 130 143
 SuccessExitStatus=130 143
 KillSignal=SIGTERM
 KillMode=control-group
@@ -306,6 +307,8 @@ WantedBy=multi-user.target
     )
     rehearsal.unit_file.chmod(0o644)
     _systemctl("daemon-reload")
+    rehearsal.journal_since = _utc_now()
+    rehearsal.journal_cursor = _journal_cursor()
     rehearsal.unit_installed = True
 
 
@@ -729,10 +732,12 @@ def _final_audit(
 
 
 def _assert_journal_safe(rehearsal: Rehearsal) -> None:
-    result = run_command(
-        ["journalctl", "-u", SERVICE_NAME, "-n", "300", "--no-pager", "--output=cat"],
-        check=False,
-    )
+    command = ["journalctl", "-u", SERVICE_NAME, "--no-pager", "--output=cat"]
+    if rehearsal.journal_cursor:
+        command.extend(["--after-cursor", rehearsal.journal_cursor])
+    elif rehearsal.journal_since:
+        command.extend(["--since", rehearsal.journal_since])
+    result = run_command(command, check=False)
     if result.returncode not in {0, 1}:
         raise RehearsalError("journalctl could not inspect the rehearsal unit")
     journal = result.stdout
@@ -752,6 +757,23 @@ def _assert_volume_exists(rehearsal: Rehearsal) -> None:
         raise RehearsalError("rehearsal PostgreSQL volume disappeared during recovery")
 
 
+def _journal_cursor() -> str | None:
+    result = run_command(
+        ["journalctl", "-u", SERVICE_NAME, "-n", "0", "--show-cursor", "--no-pager"],
+        check=False,
+    )
+    for line in reversed(result.stdout.splitlines()):
+        if line.startswith("-- cursor: "):
+            return line.removeprefix("-- cursor: ").strip() or None
+    return None
+
+
+def _utc_now() -> str:
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).isoformat()
+
+
 def _cleanup(rehearsal: Rehearsal) -> list[str]:
     failures: list[str] = []
     if rehearsal.unit_installed:
@@ -760,17 +782,30 @@ def _cleanup(rehearsal: Rehearsal) -> list[str]:
         _cleanup_step(
             failures, "systemd daemon-reload", lambda: _systemctl("daemon-reload")
         )
-    _cleanup_step(
-        failures,
-        "owned Compose teardown",
-        lambda: rehearsal.compose("down", "--volumes", "--remove-orphans", check=False),
-    )
-    _cleanup_step(
-        failures,
-        "temporary files",
-        lambda: shutil.rmtree(rehearsal.temp_dir, ignore_errors=False),
-    )
+    compose_failed = False
+    try:
+        _teardown_owned_compose(rehearsal)
+    except Exception as exc:  # noqa: BLE001 - cleanup must continue
+        compose_failed = True
+        failures.append(f"owned Compose teardown: {type(exc).__name__}")
+    if not compose_failed:
+        _cleanup_step(
+            failures,
+            "temporary files",
+            lambda: shutil.rmtree(rehearsal.temp_dir, ignore_errors=False),
+        )
+    else:
+        print(
+            "Compose teardown failed; temporary files preserved for manual cleanup",
+            file=sys.stderr,
+        )
     return failures
+
+
+def _teardown_owned_compose(rehearsal: Rehearsal) -> None:
+    result = rehearsal.compose("down", "--volumes", "--remove-orphans", check=False)
+    if result.returncode != 0:
+        raise RehearsalError("owned Compose teardown returned a non-zero exit code")
 
 
 def _remove_unit(rehearsal: Rehearsal) -> None:
