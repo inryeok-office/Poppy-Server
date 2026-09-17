@@ -44,6 +44,7 @@ required_docs=(
   "docs/configuration.md"
   "docs/api-convention.md"
   "docs/testing.md"
+  "docs/systemd-runtime-recovery.md"
   "docs/ci.md"
   "docs/pull-request-convention.md"
 )
