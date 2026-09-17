@@ -22,6 +22,69 @@ class AgentExecutionStatusService(
     private val executionStatusEventPublisher: ExecutionStatusEventPublisher,
 ) {
     @Transactional(readOnly = true)
+    fun findActive(agentId: UUID, robotId: UUID): ActiveExecutionReport? {
+        requireAgentRobot(agentId, robotId)
+        val robot = robotRepository.findById(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        val executionId = robot.currentExecutionId ?: return null
+        val execution = executionRepository.findById(executionId)
+            ?: throw ApplicationException(ErrorCode.EXECUTION_RECOVERY_INVARIANT_VIOLATED)
+        val latestRobot = robotRepository.findById(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (latestRobot.currentExecutionId == null) {
+            return null
+        }
+        if (latestRobot.currentExecutionId != executionId ||
+            execution.assignedRobotId != robotId || !execution.status.isActive()
+        ) {
+            throw ApplicationException(ErrorCode.EXECUTION_RECOVERY_INVARIANT_VIOLATED)
+        }
+        return ActiveExecutionReport(execution.id, robotId, execution.status)
+    }
+
+    @Transactional
+    fun recoverActive(agentId: UUID, robotId: UUID): ExecutionRecoveryReport {
+        requireAgentRobot(agentId, robotId)
+        val currentRobot = robotRepository.findById(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        val executionId = currentRobot.currentExecutionId
+            ?: return ExecutionRecoveryReport(robotId, null, null, null, RecoveryAction.NO_ACTIVE_EXECUTION)
+
+        val execution = executionRepository.findByIdForStatusUpdate(executionId)
+            ?: throw ApplicationException(ErrorCode.EXECUTION_RECOVERY_INVARIANT_VIOLATED)
+        val robot = robotRepository.findByIdForStatusUpdate(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (robot.currentExecutionId == null) {
+            return ExecutionRecoveryReport(robotId, null, null, null, RecoveryAction.NO_ACTIVE_EXECUTION)
+        }
+        if (robot.agentId != agentId || robot.currentExecutionId != executionId ||
+            execution.assignedRobotId != robotId
+        ) {
+            throw ApplicationException(ErrorCode.EXECUTION_RECOVERY_INVARIANT_VIOLATED)
+        }
+        val previousStatus = execution.status
+        if (!previousStatus.isRecoverable()) {
+            throw ApplicationException(ErrorCode.EXECUTION_RECOVERY_INVARIANT_VIOLATED)
+        }
+        execution.fail()
+        robot.releaseExecution(executionId)
+        executionRepository.save(execution)
+        robotRepository.save(robot)
+        execution.sessionId?.let { sessionId ->
+            executionStatusEventPublisher.publish(
+                ExecutionStatusChangedEvent(execution.id, sessionId, execution.status),
+            )
+        }
+        return ExecutionRecoveryReport(
+            robotId = robotId,
+            executionId = executionId,
+            previousStatus = previousStatus,
+            status = execution.status,
+            action = RecoveryAction.RECOVERED_AS_FAILED,
+        )
+    }
+
+    @Transactional(readOnly = true)
     fun find(agentId: UUID, executionId: UUID, robotId: UUID): ExecutionStatusReport {
         agentRepository.findById(agentId)
             ?: throw ApplicationException(ErrorCode.AGENT_NOT_FOUND)
@@ -111,6 +174,16 @@ class AgentExecutionStatusService(
             throw ApplicationException(ErrorCode.EXECUTION_STATUS_TRANSITION_INVALID)
         }
     }
+
+    private fun requireAgentRobot(agentId: UUID, robotId: UUID) {
+        agentRepository.findById(agentId)
+            ?: throw ApplicationException(ErrorCode.AGENT_NOT_FOUND)
+        val robot = robotRepository.findById(robotId)
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (robot.agentId != agentId) {
+            throw ApplicationException(ErrorCode.AGENT_ROBOT_BINDING_MISMATCH)
+        }
+    }
 }
 
 data class ReportExecutionStatusCommand(
@@ -139,5 +212,30 @@ data class ExecutionStatusReport(
     val status: ExecutionStatus,
 )
 
+data class ActiveExecutionReport(
+    val executionId: UUID,
+    val robotId: UUID,
+    val status: ExecutionStatus,
+)
+
+data class ExecutionRecoveryReport(
+    val robotId: UUID,
+    val executionId: UUID?,
+    val previousStatus: ExecutionStatus?,
+    val status: ExecutionStatus?,
+    val action: RecoveryAction,
+)
+
+enum class RecoveryAction {
+    NO_ACTIVE_EXECUTION,
+    RECOVERED_AS_FAILED,
+}
+
 private fun ExecutionStatus.isTerminal(): Boolean = this == ExecutionStatus.COMPLETED ||
     this == ExecutionStatus.FAILED || this == ExecutionStatus.CANCELLED
+
+private fun ExecutionStatus.isActive(): Boolean = this == ExecutionStatus.ASSIGNED ||
+    this == ExecutionStatus.RUNNING
+
+private fun ExecutionStatus.isRecoverable(): Boolean = this == ExecutionStatus.ASSIGNED ||
+    this == ExecutionStatus.RUNNING
