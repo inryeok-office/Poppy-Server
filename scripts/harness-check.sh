@@ -45,6 +45,7 @@ required_docs=(
   "docs/api-convention.md"
   "docs/testing.md"
   "docs/systemd-runtime-recovery.md"
+  "docs/agent-credential-cutover.md"
   "docs/ci.md"
   "docs/pull-request-convention.md"
 )
@@ -52,6 +53,24 @@ required_docs=(
 for doc in "${required_docs[@]}"; do
   require_file "$doc"
 done
+
+if [ ! -f "scripts/agent_credential_cutover_rehearsal.py" ]; then
+  echo "MISSING: scripts/agent_credential_cutover_rehearsal.py"
+  fail=1
+else
+  grep -q "POPPY_AGENT_CREDENTIAL_CUTOVER_REHEARSAL" scripts/agent_credential_cutover_rehearsal.py || {
+    echo "MISSING: credential rehearsal opt-in guard"
+    fail=1
+  }
+  grep -q "I_UNDERSTAND_LOCAL_ONLY" scripts/agent_credential_cutover_rehearsal.py || {
+    echo "MISSING: credential rehearsal confirmation guard"
+    fail=1
+  }
+  grep -q "ROBOT_MODE" scripts/agent_credential_cutover_rehearsal.py || {
+    echo "MISSING: mock hardware guard"
+    fail=1
+  }
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "harness-check FAILED"
