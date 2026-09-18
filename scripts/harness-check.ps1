@@ -48,12 +48,30 @@ $requiredDocs = @(
     "docs/configuration.md",
     "docs/api-convention.md",
     "docs/testing.md",
+    "docs/agent-credential-cutover.md",
     "docs/ci.md",
     "docs/pull-request-convention.md"
 )
 
 foreach ($doc in $requiredDocs) {
     Require-File $doc
+}
+
+Require-File "scripts/agent_credential_cutover_rehearsal.py"
+if (Test-Path "scripts/agent_credential_cutover_rehearsal.py" -PathType Leaf) {
+    $rehearsal = Get-Content -Raw -Path "scripts/agent_credential_cutover_rehearsal.py"
+    if ($rehearsal -notmatch "POPPY_AGENT_CREDENTIAL_CUTOVER_REHEARSAL") {
+        Write-Output "MISSING: credential rehearsal opt-in guard"
+        $fail = $true
+    }
+    if ($rehearsal -notmatch "I_UNDERSTAND_LOCAL_ONLY") {
+        Write-Output "MISSING: credential rehearsal confirmation guard"
+        $fail = $true
+    }
+    if ($rehearsal -notmatch "ROBOT_MODE") {
+        Write-Output "MISSING: mock hardware guard"
+        $fail = $true
+    }
 }
 
 if ($fail) {
