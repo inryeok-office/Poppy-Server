@@ -19,3 +19,16 @@ poppy:
     recovery-attempt-window: ${POPPY_SESSION_RECOVERY_ATTEMPT_WINDOW:PT1M}
     recovery-max-attempts: ${POPPY_SESSION_RECOVERY_MAX_ATTEMPTS:5}
     recovery-attempt-cleanup-interval-milliseconds: ${POPPY_SESSION_RECOVERY_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS:60000}
+  admin:
+    username: ${POPPY_ADMIN_USERNAME:}
+    password-hash: ${POPPY_ADMIN_PASSWORD_HASH:}
+    session:
+      ttl: ${POPPY_ADMIN_SESSION_TTL:PT8H}
+      cleanup-interval-milliseconds: ${POPPY_ADMIN_SESSION_CLEANUP_INTERVAL_MILLISECONDS:60000}
+    login:
+      attempt-window: ${POPPY_ADMIN_LOGIN_ATTEMPT_WINDOW:PT1M}
+      max-attempts: ${POPPY_ADMIN_LOGIN_MAX_ATTEMPTS:5}
+      attempt-cleanup-interval-milliseconds: ${POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS:60000}
+    cookie:
+      same-site: ${POPPY_ADMIN_COOKIE_SAME_SITE:Strict}
+      secure: ${POPPY_ADMIN_COOKIE_SECURE:true}

@@ -45,4 +45,9 @@ enum class ErrorCode(
     EXECUTION_SESSION_ACTIVE(HttpStatus.CONFLICT, "EXECUTION_SESSION_ACTIVE", "The Session already has an active Execution"),
     BLOCK_PROGRAM_INVALID(HttpStatus.BAD_REQUEST, "BLOCK_PROGRAM_INVALID", "The Block Program is invalid"),
     MISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "MISSION_NOT_FOUND", "The Mission was not found"),
+    ADMIN_CREDENTIAL_INVALID(HttpStatus.UNAUTHORIZED, "ADMIN_CREDENTIAL_INVALID", "The admin credential is invalid"),
+    ADMIN_LOGIN_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "ADMIN_LOGIN_RATE_LIMITED", "Too many admin login attempts"),
+    ADMIN_LOGIN_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ADMIN_LOGIN_FAILED", "The admin login could not be processed"),
+    ADMIN_SESSION_INVALID(HttpStatus.UNAUTHORIZED, "ADMIN_SESSION_INVALID", "The admin session is invalid"),
+    ADMIN_LOGOUT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ADMIN_LOGOUT_FAILED", "The admin logout could not be processed"),
 }
