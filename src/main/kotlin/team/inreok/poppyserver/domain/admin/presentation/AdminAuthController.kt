@@ -3,6 +3,7 @@ package team.inreok.poppyserver.domain.admin.presentation
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
@@ -51,8 +52,8 @@ class AdminAuthController(
 }
 
 data class AdminLoginRequest(
-    @field:NotBlank val username: String?,
-    @field:NotBlank val password: String?,
+    @field:NotBlank @field:Size(max = 64) val username: String?,
+    @field:NotBlank @field:Size(max = 128) val password: String?,
 ) {
     override fun toString(): String = "AdminLoginRequest()"
 }

@@ -5,6 +5,7 @@ import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Test
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import team.inreok.poppyserver.domain.admin.model.AdminSession
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
@@ -24,7 +25,7 @@ class AdminAuthenticationServiceTest {
             Duration.ofHours(8),
             clock,
         ),
-        adminLoginAttemptRateLimiter = AdminLoginAttemptRateLimiter(Duration.ofMinutes(1), 2, clock),
+        adminLoginAttemptRateLimiter = AdminLoginAttemptRateLimiter(Duration.ofMinutes(1), 2, 3, clock),
     )
 
     @Test
@@ -55,6 +56,43 @@ class AdminAuthenticationServiceTest {
         val exception = assertFailsWith<ApplicationException> { service.login("admin", "wrong", "127.0.0.2") }
 
         assertEquals(ErrorCode.ADMIN_LOGIN_RATE_LIMITED, exception.errorCode)
+    }
+
+    @Test
+    fun `IP 제한에 걸리면 credential 검증을 호출하지 않는다`() {
+        val countingEncoder = CountingEncoder()
+        val limited = AdminAuthenticationService(
+            adminCredentialVerifier = AdminCredentialVerifier(
+                "admin",
+                requireNotNull(countingEncoder.encode(PASSWORD)),
+                countingEncoder,
+            ),
+            adminSessionService = AdminSessionService(
+                repository,
+                AdminSessionAccessVerifier(repository, clock),
+                Duration.ofHours(8),
+                clock,
+            ),
+            adminLoginAttemptRateLimiter = AdminLoginAttemptRateLimiter(Duration.ofMinutes(1), 2, 3, clock),
+        )
+        repeat(3) { index -> assertFailsWith<ApplicationException> { limited.login("user$index", "wrong", "127.0.0.3") } }
+        val callsBefore = countingEncoder.matchCalls
+
+        val exception = assertFailsWith<ApplicationException> { limited.login("another", "wrong", "127.0.0.3") }
+
+        assertEquals(ErrorCode.ADMIN_LOGIN_RATE_LIMITED, exception.errorCode)
+        assertEquals(callsBefore, countingEncoder.matchCalls)
+    }
+
+    private class CountingEncoder(private val delegate: PasswordEncoder = BCryptPasswordEncoder(4)) : PasswordEncoder {
+        var matchCalls = 0
+
+        override fun encode(rawPassword: CharSequence?): String? = delegate.encode(rawPassword)
+
+        override fun matches(rawPassword: CharSequence?, encodedPassword: String?): Boolean {
+            matchCalls += 1
+            return delegate.matches(rawPassword, encodedPassword)
+        }
     }
 
     private class FailingAdminSessionRepository : AdminSessionRepository {

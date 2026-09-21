@@ -27,7 +27,8 @@
 | `POPPY_ADMIN_SESSION_TTL` | 관리자 세션 유효 시간(로그인 시점 기준 고정 만료, ISO-8601 Duration) | `PT8H` |
 | `POPPY_ADMIN_SESSION_CLEANUP_INTERVAL_MILLISECONDS` | 만료·무효화된 관리자 세션 정리 주기(밀리초) | `60000` |
 | `POPPY_ADMIN_LOGIN_ATTEMPT_WINDOW` | 관리자 로그인 시도 제한 윈도우 | `PT1M` |
-| `POPPY_ADMIN_LOGIN_MAX_ATTEMPTS` | 윈도우당 허용 로그인 시도 횟수 | `5` |
+| `POPPY_ADMIN_LOGIN_MAX_ATTEMPTS` | 윈도우당 IP+username 기준 허용 로그인 시도 횟수 | `5` |
+| `POPPY_ADMIN_LOGIN_IP_MAX_ATTEMPTS` | 윈도우당 IP 단독 기준 허용 로그인 시도 횟수(username 변경 우회 방지) | `20` |
 | `POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS` | 로그인 시도 기록 정리 주기(밀리초) | `60000` |
 | `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite | `Strict` |
 | `POPPY_ADMIN_COOKIE_SECURE` | 관리자 세션 쿠키 Secure(`local` 프로필은 `false`) | `true` |

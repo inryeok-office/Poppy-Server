@@ -28,6 +28,7 @@ poppy:
     login:
       attempt-window: ${POPPY_ADMIN_LOGIN_ATTEMPT_WINDOW:PT1M}
       max-attempts: ${POPPY_ADMIN_LOGIN_MAX_ATTEMPTS:5}
+      ip-max-attempts: ${POPPY_ADMIN_LOGIN_IP_MAX_ATTEMPTS:20}
       attempt-cleanup-interval-milliseconds: ${POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS:60000}
     cookie:
       same-site: ${POPPY_ADMIN_COOKIE_SAME_SITE:Strict}

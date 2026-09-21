@@ -8,19 +8,19 @@
 
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
-| `username` | string | 필수, 공백 불가 |
-| `password` | string | 필수, 공백 불가 |
+| `username` | string | 필수, 공백 불가, 최대 64자 |
+| `password` | string | 필수, 공백 불가, 최대 128자 |
 
 성공 시 `200`과 함께 `{ "success": true, "data": { "authenticated": true }, "error": null }`을 반환하고 `Set-Cookie`로 관리자 세션 쿠키를 발급한다.
 
 | 상태 | 코드 | 설명 |
 | --- | --- | --- |
-| 400 | `COMMON_400` | username 또는 password가 비어 있음 |
+| 400 | `COMMON_400` | username 또는 password가 비어 있거나 길이 제한(username 64자, password 128자) 초과 |
 | 401 | `ADMIN_CREDENTIAL_INVALID` | username과 password 중 무엇이 틀렸는지 구분하지 않음 |
-| 429 | `ADMIN_LOGIN_RATE_LIMITED` | `remoteAddr + username` 기준 윈도우당 시도 횟수 초과, credential 검증 전에 판정 |
+| 429 | `ADMIN_LOGIN_RATE_LIMITED` | `remoteAddr` 단독(`POPPY_ADMIN_LOGIN_IP_MAX_ATTEMPTS`, 기본 20) 또는 `remoteAddr + username`(`POPPY_ADMIN_LOGIN_MAX_ATTEMPTS`, 기본 5) 기준 윈도우당 시도 횟수 초과, 두 제한 모두 credential 검증(BCrypt) 전에 판정 |
 | 500 | `ADMIN_LOGIN_FAILED` | 로그인 처리 중 예상하지 못한 오류 |
 
-로그인 성공 시 해당 키의 시도 기록은 초기화된다.
+로그인 성공 시 `remoteAddr + username` 키의 시도 기록만 초기화된다. `remoteAddr` 단독 카운터는 윈도우 만료로만 초기화된다.
 
 ## POST /api/v1/admin/auth/logout
 

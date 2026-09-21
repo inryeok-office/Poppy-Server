@@ -122,6 +122,30 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
     }
 
     @Test
+    fun `같은 IP에서 username을 바꿔도 IP 제한을 초과하면 429이다`() {
+        repeat(20) { index ->
+            login(username = "user$index", password = "wrong-password", address = "10.0.6.1")
+                .andExpect(status().isUnauthorized)
+        }
+
+        login(username = "user-final", password = "wrong-password", address = "10.0.6.1")
+            .andExpect(status().isTooManyRequests)
+            .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_LOGIN_RATE_LIMITED.code))
+    }
+
+    @Test
+    fun `username 65자 또는 password 129자는 400이다`() {
+        listOf(
+            """{"username":"${"a".repeat(65)}","password":"$PASSWORD"}""",
+            """{"username":"$USERNAME","password":"${"p".repeat(129)}"}""",
+        ).forEach { body ->
+            mockMvc.perform(post(LOGIN_PATH).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.error.code").value(ErrorCode.INVALID_INPUT.code))
+        }
+    }
+
+    @Test
     fun `로그인 성공은 시도 횟수를 초기화한다`() {
         repeat(4) { login(password = "wrong-password", address = "10.0.2.3").andExpect(status().isUnauthorized) }
         login(address = "10.0.2.3").andExpect(status().isOk)

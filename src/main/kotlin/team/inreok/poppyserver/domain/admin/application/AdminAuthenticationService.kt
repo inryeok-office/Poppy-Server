@@ -16,6 +16,7 @@ class AdminAuthenticationService(
 ) {
     fun login(username: String, password: String, clientAddress: String): OpenedAdminSession {
         try {
+            adminLoginAttemptRateLimiter.checkAndRecordAddress(clientAddress)
             val attemptKey = attemptKey(clientAddress, username)
             adminLoginAttemptRateLimiter.checkAndRecord(attemptKey)
             adminCredentialVerifier.verify(username, password)

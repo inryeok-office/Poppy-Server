@@ -11,7 +11,7 @@ import kotlin.test.assertFailsWith
 
 class AdminLoginAttemptRateLimiterTest {
     private val clock = MutableTestClock(Instant.parse("2026-09-21T00:00:00Z"))
-    private val limiter = AdminLoginAttemptRateLimiter(Duration.ofMinutes(1), 5, clock)
+    private val limiter = AdminLoginAttemptRateLimiter(Duration.ofMinutes(1), 5, 3, clock)
 
     @Test
     fun `최대 시도 횟수까지 허용하고 초과하면 ADMIN_LOGIN_RATE_LIMITED를 던진다`() {
@@ -59,5 +59,15 @@ class AdminLoginAttemptRateLimiterTest {
         clock.current = clock.current.plusSeconds(31)
         assertEquals(1, limiter.cleanupExpiredEntries(clock.current))
         assertEquals(1, limiter.entryCount())
+    }
+
+    @Test
+    fun `IP 단독 제한은 ip 최대 시도 횟수를 초과하면 ADMIN_LOGIN_RATE_LIMITED를 던지고 reset의 영향을 받지 않는다`() {
+        repeat(3) { limiter.checkAndRecordAddress("client") }
+        limiter.reset("client")
+
+        val exception = assertFailsWith<ApplicationException> { limiter.checkAndRecordAddress("client") }
+
+        assertEquals(ErrorCode.ADMIN_LOGIN_RATE_LIMITED, exception.errorCode)
     }
 }
