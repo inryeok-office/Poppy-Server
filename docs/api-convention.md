@@ -36,6 +36,11 @@
 |---|---|---|
 | `COMMON_400` | 400 | 요청 값이 올바르지 않음 |
 | `COMMON_500` | 500 | 서버 내부 오류 |
+| `ADMIN_CREDENTIAL_INVALID` | 401 | 관리자 credential이 올바르지 않음 |
+| `ADMIN_LOGIN_RATE_LIMITED` | 429 | 관리자 로그인 시도 횟수 초과 |
+| `ADMIN_LOGIN_FAILED` | 500 | 관리자 로그인 처리 중 예상하지 못한 오류 |
+| `ADMIN_SESSION_INVALID` | 401 | 관리자 세션이 없거나 유효하지 않음 |
+| `ADMIN_LOGOUT_FAILED` | 500 | 관리자 로그아웃 처리 중 예상하지 못한 오류 |
 
 ## 전역 예외 처리
 

@@ -22,6 +22,15 @@
 | `POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS` | Robot heartbeat timeout(초) | `90` |
 | `POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS` | stale Robot 검사 주기(밀리초) | `30000` |
 | `POPPY_AGENT_HEARTBEAT_OFFLINE_BATCH_SIZE` | stale Robot 일괄 처리 크기 | `100` |
+| `POPPY_ADMIN_USERNAME` | 관리자 로그인 username, 비어 있으면 로그인 불가 | 설정 필요 |
+| `POPPY_ADMIN_PASSWORD_HASH` | 관리자 비밀번호 BCrypt 해시, 비어 있으면 로그인 불가 | 설정 필요 |
+| `POPPY_ADMIN_SESSION_TTL` | 관리자 세션 유효 시간(로그인 시점 기준 고정 만료, ISO-8601 Duration) | `PT8H` |
+| `POPPY_ADMIN_SESSION_CLEANUP_INTERVAL_MILLISECONDS` | 만료·무효화된 관리자 세션 정리 주기(밀리초) | `60000` |
+| `POPPY_ADMIN_LOGIN_ATTEMPT_WINDOW` | 관리자 로그인 시도 제한 윈도우 | `PT1M` |
+| `POPPY_ADMIN_LOGIN_MAX_ATTEMPTS` | 윈도우당 허용 로그인 시도 횟수 | `5` |
+| `POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS` | 로그인 시도 기록 정리 주기(밀리초) | `60000` |
+| `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite | `Strict` |
+| `POPPY_ADMIN_COOKIE_SECURE` | 관리자 세션 쿠키 Secure(`local` 프로필은 `false`) | `true` |
 
 ## 로컬 데이터베이스 실행
 
@@ -38,3 +47,9 @@ Flyway가 `src/main/resources/db/migration`의 SQL 스크립트를 애플리케�
 ## 통합 테스트
 
 `PostgresConnectionIntegrationTest`는 Testcontainers로 PostgreSQL 컨테이너를 띄우고 연결과 Flyway 마이그레이션 적용을 검증한다. 로컬에서 Docker가 실행 중이어야 하며, CI에서도 동일하게 동작한다.
+
+## 관리자 인증 설정
+
+관리자 계정은 DB가 아니라 환경변수로 주입한다. BCrypt 해시는 `htpasswd -bnBC 10 "" '<비밀번호>' | tr -d ':\n'`으로 생성한다(`$2y$` 접두사도 그대로 사용 가능). `.env` 값에는 `$`가 들어가므로 작은따옴표로 감싸고, `docker-compose.yml`에 직접 쓸 때는 `$$`로 이스케이프한다.
+
+`local` 프로필에는 개발용 계정(`admin`)이 정의되어 있으며 운영 환경에서는 반드시 환경변수로 덮어쓴다.
