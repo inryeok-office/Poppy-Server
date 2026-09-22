@@ -30,7 +30,7 @@
 | `POPPY_ADMIN_LOGIN_MAX_ATTEMPTS` | 윈도우당 IP+username 기준 허용 로그인 시도 횟수 | `5` |
 | `POPPY_ADMIN_LOGIN_IP_MAX_ATTEMPTS` | 윈도우당 IP 단독 기준 허용 로그인 시도 횟수(username 변경 우회 방지) | `20` |
 | `POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS` | 로그인 시도 기록 정리 주기(밀리초) | `60000` |
-| `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite | `Strict` |
+| `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite, `Strict`/`Lax`만 허용(대소문자 무시), `None`은 CSRF 보호가 없어 거부하고 애플리케이션이 기동 실패한다 | `Strict` |
 | `POPPY_ADMIN_COOKIE_SECURE` | 관리자 세션 쿠키 Secure(`local` 프로필은 `false`) | `true` |
 
 ## 로컬 데이터베이스 실행
