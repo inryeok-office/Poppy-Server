@@ -8,8 +8,8 @@ import team.inreok.poppyserver.global.security.AdminSessionCredentials
 
 @Component
 class AdminSessionCookieFactory(
-    @Value("\${poppy.admin.cookie.same-site:Strict}") sameSite: String,
-    @Value("\${poppy.admin.cookie.secure:true}") private val secure: Boolean,
+    @Value("\${server.servlet.session.cookie.same-site:strict}") sameSite: String,
+    @Value("\${server.servlet.session.cookie.secure:true}") private val secure: Boolean,
 ) {
     private val sameSite: String
 
@@ -18,7 +18,7 @@ class AdminSessionCookieFactory(
             "strict" -> "Strict"
             "lax" -> "Lax"
             else -> throw IllegalStateException(
-                "poppy.admin.cookie.same-site는 Strict 또는 Lax만 허용한다. 입력값: $sameSite"
+                "server.servlet.session.cookie.same-site(SESSION_COOKIE_SAME_SITE)는 Strict 또는 Lax만 허용한다. 입력값: $sameSite"
             )
         }
     }
