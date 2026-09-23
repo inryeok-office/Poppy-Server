@@ -1,11 +1,14 @@
 package team.inreok.poppyserver.domain.robot
 
 import java.util.UUID
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -14,12 +17,15 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import team.inreok.poppyserver.domain.robot.infrastructure.RobotJpaRepository
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import team.inreok.poppyserver.support.AdminSessionCookieTestConfiguration
+import team.inreok.poppyserver.support.AdminSessionTestSupport
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(AdminSessionCookieTestConfiguration::class)
 class RobotManagementIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
@@ -30,6 +36,14 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var robotJpaRepository: RobotJpaRepository
+
+    @Autowired
+    lateinit var jdbcTemplate: JdbcTemplate
+
+    @BeforeEach
+    fun openAdminSession() {
+        AdminSessionTestSupport.insertValidSession(jdbcTemplate)
+    }
 
     @Test
     fun `Robot을 등록하고 명시한 capability와 nullable 참조를 저장한다`() {
