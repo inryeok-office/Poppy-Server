@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
@@ -158,7 +159,7 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
     fun `로그아웃은 204와 쿠키 삭제 헤더를 반환하고 같은 쿠키로 다시 로그아웃하면 401이다`() {
         val token = loginToken("10.0.3.1")
 
-        val result = mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)))
+        val result = mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader()))
             .andExpect(status().isNoContent)
             .andReturn()
 
@@ -170,21 +171,21 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
         val revokedAt = jdbcTemplate.queryForList("SELECT revoked_at FROM admin_sessions").single()["revoked_at"]
         assertNotNull(revokedAt)
 
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)))
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader()))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_SESSION_INVALID.code))
     }
 
     @Test
     fun `쿠키가 없으면 로그아웃은 401 ADMIN_SESSION_INVALID이다`() {
-        mockMvc.perform(post(LOGOUT_PATH))
+        mockMvc.perform(post(LOGOUT_PATH).with(csrf().asHeader()))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_SESSION_INVALID.code))
     }
 
     @Test
     fun `위조된 토큰은 401 ADMIN_SESSION_INVALID이다`() {
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie("forged-token-value")))
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie("forged-token-value")).with(csrf().asHeader()))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_SESSION_INVALID.code))
     }
@@ -194,9 +195,39 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
         val token = "expired-session-token"
         insertSession(token, expiresAt = Instant.now().minusSeconds(1))
 
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)))
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader()))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_SESSION_INVALID.code))
+    }
+
+    @Test
+    fun `CSRF 토큰 없이 로그아웃하면 403이고 토큰을 붙이면 통과한다`() {
+        val token = loginToken("10.0.7.1")
+
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)))
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader()))
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `로그인은 CSRF 토큰 없이도 통과한다`() {
+        login(address = "10.0.7.2").andExpect(status().isOk)
+    }
+
+    @Test
+    fun `CSRF 토큰 발급은 headerName과 token을 반환하고 세션 없이는 401이다`() {
+        mockMvc.perform(get(CSRF_PATH))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value(ErrorCode.ADMIN_SESSION_INVALID.code))
+
+        val token = loginToken("10.0.7.3")
+
+        mockMvc.perform(get(CSRF_PATH).cookie(sessionCookie(token)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.headerName").value("X-CSRF-TOKEN"))
+            .andExpect(jsonPath("$.data.token").isNotEmpty)
     }
 
     @Test
@@ -227,7 +258,7 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
     @Test
     fun `로그아웃된 세션으로는 boundary를 통과하지 못한다`() {
         val token = loginToken("10.0.4.2")
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token))).andExpect(status().isNoContent)
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader())).andExpect(status().isNoContent)
 
         mockMvc.perform(get(PROBE_PATH).cookie(sessionCookie(token)))
             .andExpect(status().isUnauthorized)
@@ -237,8 +268,8 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
     fun `password와 토큰과 해시는 로그에 남지 않는다`(output: CapturedOutput) {
         val token = loginToken("10.0.5.1")
         login(password = WRONG_PASSWORD, address = "10.0.5.2").andExpect(status().isUnauthorized)
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token))).andExpect(status().isNoContent)
-        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token))).andExpect(status().isUnauthorized)
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader())).andExpect(status().isNoContent)
+        mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader())).andExpect(status().isUnauthorized)
 
         val logs = output.all
         assertFalse(logs.contains(PASSWORD))
@@ -292,6 +323,7 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
     companion object {
         private const val LOGIN_PATH = "/api/v1/admin/auth/login"
         private const val LOGOUT_PATH = "/api/v1/admin/auth/logout"
+        private const val CSRF_PATH = "/api/v1/admin/auth/csrf"
         private const val PROBE_PATH = "/api/v1/admin/boundary-probe"
         private const val USERNAME = "admin"
         private const val PASSWORD = "integration-admin-password"
