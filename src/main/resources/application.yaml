@@ -1,6 +1,19 @@
 spring:
   application:
     name: Poppy-Server
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${TRUSTED_PROXIES:}
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: ${SESSION_COOKIE_SAME_SITE:strict}
 poppy:
   agent:
     heartbeat-timeout-seconds: ${POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS:90}
@@ -22,6 +35,7 @@ poppy:
   admin:
     username: ${POPPY_ADMIN_USERNAME:}
     password-hash: ${POPPY_ADMIN_PASSWORD_HASH:}
+    allowed-origins: ${ADMIN_ALLOWED_ORIGINS:}
     session:
       ttl: ${POPPY_ADMIN_SESSION_TTL:PT8H}
       cleanup-interval-milliseconds: ${POPPY_ADMIN_SESSION_CLEANUP_INTERVAL_MILLISECONDS:60000}

@@ -32,6 +32,10 @@
 | `POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS` | 로그인 시도 기록 정리 주기(밀리초) | `60000` |
 | `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite, `Strict`/`Lax`만 허용(대소문자 무시), `None`은 CSRF 보호가 없어 거부하고 애플리케이션이 기동 실패한다 | `Strict` |
 | `POPPY_ADMIN_COOKIE_SECURE` | 관리자 세션 쿠키 Secure(`local` 프로필은 `false`) | `true` |
+| `TRUSTED_PROXIES` | `X-Forwarded-For`/`X-Forwarded-Proto`를 신뢰할 리버스 프록시 IP/대역 정규식. 비어 있으면 어떤 프록시도 신뢰하지 않고 실제 연결 IP만 사용한다 | 빈 값 |
+| `ADMIN_ALLOWED_ORIGINS` | `/api/v1/admin/**` CORS를 허용할 origin 목록(콤마 구분). 비어 있으면 모든 cross-origin 요청을 거부한다 | 빈 값 |
+| `SESSION_COOKIE_SECURE` | CSRF 토큰을 담는 HTTP 세션 쿠키 Secure | `false` |
+| `SESSION_COOKIE_SAME_SITE` | CSRF 토큰을 담는 HTTP 세션 쿠키 SameSite(`Strict`/`Lax`/`None`). 관리자 웹이 cross-site로 접근하면 `None`과 `SESSION_COOKIE_SECURE=true`가 함께 필요하다 | `strict` |
 
 ## 로컬 데이터베이스 실행
 
