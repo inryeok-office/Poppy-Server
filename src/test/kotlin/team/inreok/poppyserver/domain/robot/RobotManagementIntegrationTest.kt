@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -79,7 +80,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/admin/robots")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"),
+                .content("{}")
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.success").value(false))
@@ -89,7 +91,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             post("/api/v1/admin/robots")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(registrationJson("중복-대상-${UUID.randomUUID()}", agentId = agentId)),
+                .content(registrationJson("중복-대상-${UUID.randomUUID()}", agentId = agentId))
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.error.code").value("ROBOT_ALREADY_REGISTERED"))
@@ -109,7 +112,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/$id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson(alias, operationStatus = "READY")),
+                .content(updateJson(alias, operationStatus = "READY"))
+                .with(csrf().asHeader()),
         ).andExpect(status().isOk)
 
         mockMvc.perform(get("/api/v1/admin/robots?status=READY"))
@@ -136,7 +140,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/$id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson("수정-완료", firmwareVersion = "1.2.3", sdkVersion = "2.0.0", operationStatus = "READY")),
+                .content(updateJson("수정-완료", firmwareVersion = "1.2.3", sdkVersion = "2.0.0", operationStatus = "READY"))
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.alias").value("수정-완료"))
@@ -156,7 +161,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/$id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"alias":"부분 수정 완료"}"""),
+                .content("""{"alias":"부분 수정 완료"}""")
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.alias").value("부분 수정 완료"))
@@ -166,7 +172,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/$id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"capabilities":[]}"""),
+                .content("""{"capabilities":[]}""")
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.capabilities").isEmpty)
@@ -182,7 +189,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/$id")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"capabilities":[{"code":"MOVE","status":"VERIFIED"}]}"""),
+                .content("""{"capabilities":[{"code":"MOVE","status":"VERIFIED"}]}""")
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.capabilities[0].code").value("MOVE"))
@@ -194,7 +202,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/${UUID.randomUUID()}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson("없는-로봇")),
+                .content(updateJson("없는-로봇"))
+                .with(csrf().asHeader()),
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error.code").value("ROBOT_NOT_FOUND"))
@@ -202,7 +211,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         mockMvc.perform(
             patch("/api/v1/admin/robots/${UUID.randomUUID()}")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"),
+                .content("{}")
+                .with(csrf().asHeader()),
         ).andExpect(status().isBadRequest)
     }
 
@@ -216,7 +226,8 @@ class RobotManagementIntegrationTest : PostgresIntegrationTest() {
         val result = mockMvc.perform(
             post("/api/v1/admin/robots")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(registrationJson(alias, agentId, safetyProfileId, capabilities, isExternal)),
+                .content(registrationJson(alias, agentId, safetyProfileId, capabilities, isExternal))
+                .with(csrf().asHeader()),
         )
             .andReturn()
         return objectMapper.readTree(result.response.contentAsString).also {
