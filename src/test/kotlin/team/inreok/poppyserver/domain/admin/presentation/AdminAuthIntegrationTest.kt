@@ -14,6 +14,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.mock.web.MockHttpSession
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.DynamicPropertyRegistry
@@ -27,6 +28,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import team.inreok.poppyserver.domain.admin.application.AdminSessionAccessVerifier
 import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
+import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -42,6 +44,9 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var jdbcTemplate: JdbcTemplate
+
+    @Autowired
+    lateinit var objectMapper: ObjectMapper
 
     @BeforeEach
     fun cleanAdminSessions() {
@@ -209,6 +214,27 @@ class AdminAuthIntegrationTest : PostgresIntegrationTest() {
 
         mockMvc.perform(post(LOGOUT_PATH).cookie(sessionCookie(token)).with(csrf().asHeader()))
             .andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `csrf 엔드포인트에서 발급받은 토큰을 헤더에 담아 로그아웃하면 통과한다`() {
+        val token = loginToken("10.0.7.4")
+
+        val csrfResult = mockMvc.perform(get(CSRF_PATH).cookie(sessionCookie(token)))
+            .andExpect(status().isOk)
+            .andReturn()
+        val httpSession = csrfResult.request.session as MockHttpSession
+        val csrfBody = objectMapper.readTree(csrfResult.response.contentAsString)
+        val headerName = csrfBody["data"]["headerName"].asText()
+        val issuedToken = csrfBody["data"]["token"].asText()
+
+        mockMvc.perform(
+            post(LOGOUT_PATH)
+                .session(httpSession)
+                .cookie(sessionCookie(token))
+                .header(headerName, issuedToken),
+        )
+            .andExpect(status().is2xxSuccessful)
     }
 
     @Test
