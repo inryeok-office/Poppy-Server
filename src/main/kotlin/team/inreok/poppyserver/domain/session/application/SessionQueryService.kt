@@ -4,7 +4,6 @@ import java.time.Instant
 import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.session.model.ExperienceMode
 import team.inreok.poppyserver.domain.session.model.SessionStatus
 
@@ -14,7 +13,6 @@ class SessionQueryService(
     private val sessionAccessVerifier: SessionAccessVerifier,
     private val sessionExpirationService: SessionExpirationService,
 ) {
-    @Transactional(readOnly = true)
     fun getSession(sessionId: UUID, sessionToken: String?): SessionQueryResult {
         val session = sessionAccessVerifier.verify(sessionId, sessionToken)
         return SessionQueryResult(

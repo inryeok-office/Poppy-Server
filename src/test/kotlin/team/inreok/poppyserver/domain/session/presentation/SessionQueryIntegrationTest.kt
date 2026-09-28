@@ -55,8 +55,14 @@ class SessionQueryIntegrationTest : PostgresIntegrationTest() {
         val data = objectMapper.readTree(result.response.contentAsString).get("data")
         val lastActivityAt = Instant.parse(data.get("lastActivityAt").asString())
         val expiresAt = Instant.parse(data.get("expiresAt").asString())
+        val persistedActivityAt = jdbcTemplate.queryForObject(
+            "SELECT last_activity_at FROM sessions WHERE id = ?",
+            java.sql.Timestamp::class.java,
+            created.sessionId,
+        )!!.toInstant()
 
         assertTrue(!lastActivityAt.isBefore(before))
+        assertTrue(!persistedActivityAt.isBefore(before))
         assertEquals(Duration.ofMinutes(30), Duration.between(lastActivityAt, expiresAt))
     }
 
