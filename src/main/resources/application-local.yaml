@@ -9,6 +9,11 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+server:
+  servlet:
+    session:
+      cookie:
+        secure: ${SESSION_COOKIE_SECURE:false}
 poppy:
   agent:
     token: ${POPPY_AGENT_TOKEN:}
@@ -16,5 +21,3 @@ poppy:
     # 개발용 계정 비밀번호(평문): poppy-dev-admin
     username: ${POPPY_ADMIN_USERNAME:admin}
     password-hash: ${POPPY_ADMIN_PASSWORD_HASH:$2a$10$YXHp87tDI7IlMXR6TsBSoeh0V8VJeP8AMniSWAv8aexrYwXEz3d/y}
-    cookie:
-      secure: ${POPPY_ADMIN_COOKIE_SECURE:false}

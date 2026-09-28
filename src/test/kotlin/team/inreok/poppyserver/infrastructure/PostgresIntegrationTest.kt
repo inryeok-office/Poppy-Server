@@ -7,6 +7,7 @@ import org.testcontainers.utility.DockerImageName
 
 object PostgresIntegrationContainer {
     val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
+        .withCommand("postgres", "-c", "max_connections=300")
 
     init {
         postgres.start()

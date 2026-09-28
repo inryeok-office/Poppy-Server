@@ -31,21 +31,50 @@
 | 401 | `ADMIN_SESSION_INVALID` | 쿠키 없음, 위조, 만료, 이미 무효화됨 |
 | 500 | `ADMIN_LOGOUT_FAILED` | 로그아웃 처리 중 예상하지 못한 오류 |
 
-## 세션 쿠키
+## GET /api/v1/admin/auth/csrf
 
-| 속성 | 값 |
-| --- | --- |
-| 이름 | `POPPY_ADMIN_SESSION` |
-| `HttpOnly` | 항상 |
-| `Path` | `/api/v1/admin` |
-| `Max-Age` | `POPPY_ADMIN_SESSION_TTL`(기본 `PT8H`), 로그인 시점 기준 고정 만료 |
-| `SameSite` | `POPPY_ADMIN_COOKIE_SAME_SITE`(기본 `Strict`) |
-| `Secure` | `POPPY_ADMIN_COOKIE_SECURE`(기본 `true`, `local` 프로필은 `false`) |
+로그인된 세션에서 CSRF 토큰을 발급받는다. 인증 boundary에 포함되므로 유효한 `POPPY_ADMIN_SESSION` 쿠키가 필요하다.
 
-토큰은 `SecureRandom` 32바이트를 base64url로 인코딩한 값이며 DB(`admin_sessions`)에는 SHA-256 다이제스트만 저장한다. 유효 조건은 `revoked_at IS NULL AND expires_at > now`이고, 만료·무효화된 행은 주기적으로 삭제한다.
+성공 시 `200`과 함께 다음 형식을 반환한다.
+
+```json
+{
+  "success": true,
+  "data": { "headerName": "X-CSRF-TOKEN", "token": "..." },
+  "error": null
+}
+```
+
+| 상태 | 코드 | 설명 |
+| --- | --- | --- |
+| 401 | `ADMIN_SESSION_INVALID` | 쿠키 없음, 위조, 만료, 이미 무효화됨 |
+
+## 쿠키
+
+클라이언트는 다음 두 쿠키를 모두 유지해야 한다. 브라우저가 두 쿠키를 함께 자동 전송하므로 별도 저장·재전송 로직은 필요 없다.
+
+| 속성 | `POPPY_ADMIN_SESSION`(관리자 인증) | `JSESSIONID`(CSRF 토큰 저장용 HTTP 세션) |
+| --- | --- | --- |
+| `HttpOnly` | 항상 | 항상 |
+| `Path` | `/api/v1/admin` | 컨텍스트 경로 전체 |
+| `Max-Age` | `POPPY_ADMIN_SESSION_TTL`(기본 `PT8H`), 로그인 시점 기준 고정 만료 | 컨테이너 세션 타임아웃 |
+| `SameSite` | `SESSION_COOKIE_SAME_SITE`(기본 `strict`, `Strict`/`Lax`만 허용) | `SESSION_COOKIE_SAME_SITE`(동일 값) |
+| `Secure` | `SESSION_COOKIE_SECURE`(기본 `true`, `local` 프로필은 `false`) | `SESSION_COOKIE_SECURE`(동일 값) |
+
+두 쿠키는 같은 `SESSION_COOKIE_SECURE`/`SESSION_COOKIE_SAME_SITE` 환경변수를 따른다. `POPPY_ADMIN_SESSION` 토큰은 `SecureRandom` 32바이트를 base64url로 인코딩한 값이며 DB(`admin_sessions`)에는 SHA-256 다이제스트만 저장한다. 유효 조건은 `revoked_at IS NULL AND expires_at > now`이고, 만료·무효화된 행은 주기적으로 삭제한다.
 
 ## 인증 boundary
 
 `AdminAuthenticationInterceptor`가 `/api/v1/admin/**` 전체에 적용되며 `/api/v1/admin/auth/login`만 제외된다. 쿠키가 없거나 유효한 세션이 아니면 `401 ADMIN_SESSION_INVALID`로 응답한다. 인증에 성공하면 세션 ID가 request attribute `poppy.admin.session-id`에 저장되어 후속 Controller가 사용한다.
 
-CSRF 보호는 비활성화되어 있으므로 상태 변경 요청의 CSRF 방어는 `SameSite` 쿠키 속성에 의존한다.
+## CSRF
+
+`/api/v1/admin/**`의 상태 변경 요청(POST/PUT/PATCH/DELETE)에는 CSRF 토큰이 필요하다. 로그인(`POST /api/v1/admin/auth/login`)은 예외로 CSRF 토큰 없이 호출할 수 있다.
+
+흐름:
+
+1. 로그인해 `POPPY_ADMIN_SESSION` 쿠키를 발급받는다.
+2. `GET /api/v1/admin/auth/csrf`를 호출해 `headerName`과 `token`을 받는다. 이때 서버가 함께 내려주는 `JSESSIONID` 쿠키를 유지해야 하며, 이 쿠키가 없으면 이후 검증이 실패한다.
+3. 이후 상태 변경 요청에 `headerName`(기본 `X-CSRF-TOKEN`) 헤더로 `token` 값을 담아 전송하고, `POPPY_ADMIN_SESSION`과 `JSESSIONID` 쿠키를 함께 전송한다.
+
+CSRF 토큰이 없거나 값이 틀리면 `403`으로 응답한다.

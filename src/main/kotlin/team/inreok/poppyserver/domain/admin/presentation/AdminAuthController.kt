@@ -9,6 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.web.csrf.CsrfToken
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestBody
@@ -49,6 +51,10 @@ class AdminAuthController(
             .header(HttpHeaders.SET_COOKIE, adminSessionCookieFactory.expire().toString())
             .build()
     }
+
+    @GetMapping("/csrf")
+    fun csrf(csrfToken: CsrfToken): ApiResponse<AdminCsrfTokenResponse> =
+        ApiResponse.success(AdminCsrfTokenResponse(headerName = csrfToken.headerName, token = csrfToken.token))
 }
 
 data class AdminLoginRequest(
@@ -60,4 +66,9 @@ data class AdminLoginRequest(
 
 data class AdminLoginResponse(
     val authenticated: Boolean,
+)
+
+data class AdminCsrfTokenResponse(
+    val headerName: String,
+    val token: String,
 )

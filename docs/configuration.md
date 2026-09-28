@@ -4,8 +4,9 @@
 
 - 기본(`application.yaml`): 공통 설정만 포함, DB 접속 정보 없음
 - `local`(`application-local.yaml`): 로컬 PostgreSQL 접속 정보, 환경변수로 값을 주입
+- `prod`(`application-prod.yaml`): 운영 PostgreSQL 접속 정보를 환경변수로 주입, springdoc 비활성화, actuator는 health만 노출
 
-로컬에서 실행할 때는 `SPRING_PROFILES_ACTIVE=local`을 사용한다.
+로컬에서 실행할 때는 `SPRING_PROFILES_ACTIVE=local`을, 운영 배포에는 `SPRING_PROFILES_ACTIVE=prod`를 사용한다.
 
 ## 환경변수
 
@@ -30,8 +31,10 @@
 | `POPPY_ADMIN_LOGIN_MAX_ATTEMPTS` | 윈도우당 IP+username 기준 허용 로그인 시도 횟수 | `5` |
 | `POPPY_ADMIN_LOGIN_IP_MAX_ATTEMPTS` | 윈도우당 IP 단독 기준 허용 로그인 시도 횟수(username 변경 우회 방지) | `20` |
 | `POPPY_ADMIN_LOGIN_ATTEMPT_CLEANUP_INTERVAL_MILLISECONDS` | 로그인 시도 기록 정리 주기(밀리초) | `60000` |
-| `POPPY_ADMIN_COOKIE_SAME_SITE` | 관리자 세션 쿠키 SameSite, `Strict`/`Lax`만 허용(대소문자 무시), `None`은 CSRF 보호가 없어 거부하고 애플리케이션이 기동 실패한다 | `Strict` |
-| `POPPY_ADMIN_COOKIE_SECURE` | 관리자 세션 쿠키 Secure(`local` 프로필은 `false`) | `true` |
+| `TRUSTED_PROXIES` | `X-Forwarded-For`/`X-Forwarded-Proto`를 신뢰할 리버스 프록시 IP/대역 정규식. 비어 있으면 어떤 프록시도 신뢰하지 않고 실제 연결 IP만 사용한다 | 빈 값 |
+| `ADMIN_ALLOWED_ORIGINS` | `/api/v1/admin/**` CORS를 허용할 origin 목록(콤마 구분). 비어 있으면 모든 cross-origin 요청을 거부한다 | 빈 값 |
+| `SESSION_COOKIE_SECURE` | 관리자 세션 쿠키(`POPPY_ADMIN_SESSION`)와 CSRF 토큰용 세션 쿠키(`JSESSIONID`) 둘 다에 적용되는 Secure(`local` 프로필은 `false`) | `true` |
+| `SESSION_COOKIE_SAME_SITE` | 위 두 쿠키에 공통 적용되는 SameSite, `Strict`/`Lax`만 허용(대소문자 무시). `None`은 관리자 세션 쿠키 발급이 거부되어 애플리케이션이 기동 실패한다(이 앱은 cross-site 관리자 웹을 지원하지 않는다) | `strict` |
 
 ## 로컬 데이터베이스 실행
 
