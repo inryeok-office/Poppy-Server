@@ -11,6 +11,8 @@ class Session private constructor(
     recoveryCodeDigestValue: String?,
     lastActivityAtValue: Instant,
     var expiredAt: Instant?,
+    modeValue: ExperienceMode?,
+    missionIdValue: UUID?,
 ) {
 
     var sessionTokenDigest: String? = sessionTokenDigestValue
@@ -24,6 +26,15 @@ class Session private constructor(
 
     var lastActivityAt: Instant = lastActivityAtValue
         private set
+
+    var mode: ExperienceMode? = modeValue
+        private set
+
+    var missionId: UUID? = missionIdValue
+        private set
+
+    val status: SessionStatus
+        get() = if (expiredAt == null) SessionStatus.ACTIVE else SessionStatus.EXPIRED
 
     fun advanceBlockVersion(): Long {
         currentBlockVersion += 1
@@ -51,6 +62,8 @@ class Session private constructor(
             recoveryCodeDigestValue = null,
             lastActivityAtValue = createdAt,
             expiredAt = null,
+            modeValue = null,
+            missionIdValue = null,
         )
 
         fun createWithToken(
@@ -65,6 +78,8 @@ class Session private constructor(
             recoveryCodeDigestValue = recoveryCodeDigest,
             lastActivityAtValue = createdAt,
             expiredAt = null,
+            modeValue = null,
+            missionIdValue = null,
         )
 
         fun restore(
@@ -75,6 +90,8 @@ class Session private constructor(
             recoveryCodeDigest: String? = null,
             lastActivityAt: Instant? = null,
             expiredAt: Instant? = null,
+            mode: ExperienceMode? = null,
+            missionId: UUID? = null,
         ): Session = Session(
             id = id,
             currentBlockVersionValue = currentBlockVersion,
@@ -83,6 +100,8 @@ class Session private constructor(
             recoveryCodeDigestValue = recoveryCodeDigest,
             lastActivityAtValue = lastActivityAt ?: createdAt,
             expiredAt = expiredAt,
+            modeValue = mode,
+            missionIdValue = missionId,
         )
     }
 

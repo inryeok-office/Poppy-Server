@@ -31,8 +31,7 @@ class SessionAccessVerifier(
             throw ApplicationException(ErrorCode.SESSION_TOKEN_INVALID)
         }
         ensureActive(session)
-        sessionActivityService.touch(session.id)
-        return session
+        return sessionActivityService.touch(session.id)
     }
 
     fun verifyOwnership(sessionId: UUID, rawToken: String?) {

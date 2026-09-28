@@ -46,6 +46,8 @@ class SessionPersistenceAdapter(
         recoveryCodeDigest = session.recoveryCodeDigest
         lastActivityAt = session.lastActivityAt
         expiredAt = session.expiredAt
+        mode = session.mode
+        missionId = session.missionId
     }
 
     private fun SessionEntity.toDomain(): Session = Session.restore(
@@ -56,6 +58,8 @@ class SessionPersistenceAdapter(
         recoveryCodeDigest = recoveryCodeDigest,
         lastActivityAt = lastActivityAt,
         expiredAt = expiredAt,
+        mode = mode,
+        missionId = missionId,
     )
 
     override fun findInactiveIdsBefore(cutoff: Instant): List<UUID> =

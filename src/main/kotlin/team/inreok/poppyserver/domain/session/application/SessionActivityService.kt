@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
+import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 
@@ -17,13 +18,13 @@ class SessionActivityService(
     private val clock: Clock? = null,
 ) {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    fun touch(sessionId: UUID, at: Instant = Instant.now(clock ?: Clock.systemUTC())) {
+    fun touch(sessionId: UUID, at: Instant = Instant.now(clock ?: Clock.systemUTC())): Session {
         val session = sessionRepository.findByIdForUpdate(sessionId)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
         if (session.expiredAt != null) {
             throw ApplicationException(ErrorCode.SESSION_EXPIRED)
         }
         session.touchActivity(at)
-        sessionRepository.save(session)
+        return sessionRepository.save(session)
     }
 }

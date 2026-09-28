@@ -30,6 +30,8 @@ class SessionExpirationService(
         return sessionRepository.findInactiveIdsBefore(cutoff).count { expireIfInactive(it, cutoff, now) }
     }
 
+    fun expiresAt(lastActivityAt: Instant): Instant = lastActivityAt.plus(inactivityTimeout)
+
     private fun expireIfInactive(sessionId: UUID, cutoff: Instant, now: Instant): Boolean =
         sessionExpirationTransaction.expireIfInactive(sessionId, cutoff, now)
 }

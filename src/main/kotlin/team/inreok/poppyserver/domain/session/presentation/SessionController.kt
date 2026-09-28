@@ -1,11 +1,13 @@
 package team.inreok.poppyserver.domain.session.presentation
 
+import java.time.Instant
 import java.util.UUID
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -19,6 +21,10 @@ import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SessionAccessVerifier
 import team.inreok.poppyserver.domain.session.application.SessionRecoveryService
 import team.inreok.poppyserver.domain.session.application.SessionRecoveryResult
+import team.inreok.poppyserver.domain.session.application.SessionQueryResult
+import team.inreok.poppyserver.domain.session.application.SessionQueryService
+import team.inreok.poppyserver.domain.session.model.ExperienceMode
+import team.inreok.poppyserver.domain.session.model.SessionStatus
 import team.inreok.poppyserver.global.response.ApiResponse
 
 @RestController
@@ -28,6 +34,7 @@ class SessionController(
     private val sessionService: SessionService,
     private val sessionAccessVerifier: SessionAccessVerifier,
     private val sessionRecoveryService: SessionRecoveryService,
+    private val sessionQueryService: SessionQueryService,
 ) {
     @PostMapping
     fun createSession(): ResponseEntity<ApiResponse<SessionResponse>> = ResponseEntity.status(HttpStatus.CREATED).body(
@@ -40,6 +47,14 @@ class SessionController(
         httpRequest: jakarta.servlet.http.HttpServletRequest,
     ): ResponseEntity<ApiResponse<SessionRecoveryResponse>> = ResponseEntity.ok(
         ApiResponse.success(sessionRecoveryService.restore(request.recoveryCode, httpRequest.remoteAddr).toResponse()),
+    )
+
+    @GetMapping("/{sessionId}")
+    fun getSession(
+        @PathVariable sessionId: UUID,
+        @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String?,
+    ): ResponseEntity<ApiResponse<SessionQueryResponse>> = ResponseEntity.ok(
+        ApiResponse.success(sessionQueryService.getSession(sessionId, sessionToken).toResponse()),
     )
 
     @PostMapping("/{sessionId}/block-revisions")
@@ -79,6 +94,16 @@ data class SessionRecoveryResponse(
     val currentBlockVersion: Long,
 )
 
+data class SessionQueryResponse(
+    val sessionId: UUID,
+    val mode: ExperienceMode?,
+    val missionId: UUID?,
+    val blockVersion: Long,
+    val status: SessionStatus,
+    val lastActivityAt: Instant,
+    val expiresAt: Instant,
+)
+
 data class BlockRevisionResponse(
     val sessionId: UUID,
     val blockVersion: Long,
@@ -96,6 +121,16 @@ private fun SessionRecoveryResult.toResponse(): SessionRecoveryResponse = Sessio
     sessionToken = sessionToken,
     recoveryCode = recoveryCode,
     currentBlockVersion = currentBlockVersion,
+)
+
+private fun SessionQueryResult.toResponse(): SessionQueryResponse = SessionQueryResponse(
+    sessionId = sessionId,
+    mode = mode,
+    missionId = missionId,
+    blockVersion = blockVersion,
+    status = status,
+    lastActivityAt = lastActivityAt,
+    expiresAt = expiresAt,
 )
 
 private fun BlockRevisionAppendResult.toResponse(): BlockRevisionResponse = BlockRevisionResponse(
