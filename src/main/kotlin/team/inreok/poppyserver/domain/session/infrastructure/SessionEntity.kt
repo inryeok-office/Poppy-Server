@@ -2,10 +2,13 @@ package team.inreok.poppyserver.domain.session.infrastructure
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
+import team.inreok.poppyserver.domain.session.model.ExperienceMode
 
 @Entity
 @Table(name = "sessions")
@@ -24,4 +27,9 @@ class SessionEntity(
     var lastActivityAt: Instant? = null,
     @Column(name = "expired_at")
     var expiredAt: Instant? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mode")
+    var mode: ExperienceMode? = null,
+    @Column(name = "mission_id")
+    var missionId: UUID? = null,
 )
