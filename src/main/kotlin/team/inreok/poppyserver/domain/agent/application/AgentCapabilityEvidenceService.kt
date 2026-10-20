@@ -23,6 +23,9 @@ class AgentCapabilityEvidenceService(
             ?: throw ApplicationException(ErrorCode.AGENT_NOT_FOUND)
         val robot = robotRepository.findById(robotId)
             ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        if (!robot.active) {
+            throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
+        }
         if (robot.agentId != agentId) {
             throw ApplicationException(ErrorCode.AGENT_CAPABILITY_EVIDENCE_ACCESS_DENIED)
         }
