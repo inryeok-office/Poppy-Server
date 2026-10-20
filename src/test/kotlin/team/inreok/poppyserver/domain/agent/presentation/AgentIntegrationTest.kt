@@ -12,6 +12,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import team.inreok.poppyserver.domain.agent.application.AgentRepository
@@ -148,6 +149,40 @@ class AgentIntegrationTest : PostgresIntegrationTest() {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.error.code").value("ROBOT_ALREADY_REGISTERED"))
+    }
+
+    @Test
+    fun `Agent는 자신의 binding Robot capability evidence만 조회한다`() {
+        val boundRobot = saveRobot("GO2", "EDU", "1.0.0", "COMMAND_MOVE")
+        val otherRobot = saveRobot("GO2", "EDU", "1.0.0", "COMMAND_TURN")
+        val registration = registerAgent(
+            agentName = "evidence-${UUID.randomUUID()}",
+            robots = listOf(registrationRobotJson(boundRobot, "1.0.0", "COMMAND_MOVE")),
+        )
+        val agentId = registration.body["data"]["agentId"].asText()
+        val agentToken = registration.body["data"]["agentToken"].asText()
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/$agentId/robots/${boundRobot.id}/capabilities"),
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.error.code").value("AGENT_AUTH_INVALID"))
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/$agentId/robots/${boundRobot.id}/capabilities")
+                .header("X-Agent-Token", agentToken),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.robotId").value(boundRobot.id.toString()))
+            .andExpect(jsonPath("$.data.capabilities[0].code").value("COMMAND_MOVE"))
+            .andExpect(jsonPath("$.data.capabilities[0].status").value("UNVERIFIED"))
+
+        mockMvc.perform(
+            get("/api/v1/internal/agents/$agentId/robots/${otherRobot.id}/capabilities")
+                .header("X-Agent-Token", agentToken),
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.error.code").value("AGENT_CAPABILITY_EVIDENCE_ACCESS_DENIED"))
     }
 
     @Test

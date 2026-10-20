@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import tools.jackson.databind.JsonNode
 import team.inreok.poppyserver.domain.agent.application.AgentManagementService
+import team.inreok.poppyserver.domain.agent.application.AgentCapabilityEvidence
+import team.inreok.poppyserver.domain.agent.application.AgentCapabilityEvidenceService
 import team.inreok.poppyserver.domain.agent.application.AgentRegistrationResult
 import team.inreok.poppyserver.domain.agent.application.HeartbeatCommand
 import team.inreok.poppyserver.domain.agent.application.HeartbeatRobotCommand
@@ -46,6 +48,7 @@ import team.inreok.poppyserver.global.response.ApiResponse
 @RequestMapping("/api/v1/internal/agents")
 class AgentController(
     private val agentManagementService: AgentManagementService,
+    private val agentCapabilityEvidenceService: AgentCapabilityEvidenceService,
     private val agentExecutionDeliveryService: AgentExecutionDeliveryService,
     private val agentExecutionStatusService: AgentExecutionStatusService,
 ) {
@@ -109,6 +112,14 @@ class AgentController(
         AgentActiveExecutionResponse(
             activeExecution = agentExecutionStatusService.findActive(agentId, robotId)?.toResponse(),
         ),
+    )
+
+    @GetMapping("/{agentId}/robots/{robotId}/capabilities")
+    fun getCapabilityEvidence(
+        @PathVariable agentId: UUID,
+        @PathVariable robotId: UUID,
+    ): ApiResponse<AgentCapabilityEvidenceResponse> = ApiResponse.success(
+        agentCapabilityEvidenceService.find(agentId, robotId).toResponse(),
     )
 
     @PostMapping("/{agentId}/robots/{robotId}/active-execution/recover")
@@ -230,6 +241,16 @@ data class AgentActiveExecutionResponse(
     val activeExecution: ActiveExecutionResponse?,
 )
 
+data class AgentCapabilityEvidenceResponse(
+    val robotId: UUID,
+    val capabilities: List<AgentCapabilityEvidenceItemResponse>,
+)
+
+data class AgentCapabilityEvidenceItemResponse(
+    val code: String,
+    val status: String,
+)
+
 data class ActiveExecutionResponse(
     val executionId: UUID,
     val robotId: UUID,
@@ -269,6 +290,13 @@ private fun ActiveExecutionReport.toResponse(): ActiveExecutionResponse = Active
     executionId = executionId,
     robotId = robotId,
     status = status.name,
+)
+
+private fun AgentCapabilityEvidence.toResponse(): AgentCapabilityEvidenceResponse = AgentCapabilityEvidenceResponse(
+    robotId = robotId,
+    capabilities = capabilities.map { capability ->
+        AgentCapabilityEvidenceItemResponse(capability.code, capability.status.name)
+    },
 )
 
 private fun ExecutionRecoveryReport.toResponse(): AgentExecutionRecoveryResponse = AgentExecutionRecoveryResponse(

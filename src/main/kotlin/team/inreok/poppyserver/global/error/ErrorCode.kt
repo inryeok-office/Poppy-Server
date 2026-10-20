@@ -23,6 +23,7 @@ enum class ErrorCode(
     AGENT_COMPATIBILITY_INVALID(HttpStatus.UNPROCESSABLE_ENTITY, "AGENT_COMPATIBILITY_INVALID", "The Agent and Robot are incompatible"),
     AGENT_NOT_FOUND(HttpStatus.NOT_FOUND, "AGENT_NOT_FOUND", "The Agent was not found"),
     AGENT_ROBOT_BINDING_MISMATCH(HttpStatus.CONFLICT, "AGENT_ROBOT_BINDING_MISMATCH", "The Agent and Robot binding does not match"),
+    AGENT_CAPABILITY_EVIDENCE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "AGENT_CAPABILITY_EVIDENCE_ACCESS_DENIED", "The Agent cannot read capability evidence for this Robot"),
     HEARTBEAT_PAYLOAD_INVALID(HttpStatus.BAD_REQUEST, "HEARTBEAT_PAYLOAD_INVALID", "The heartbeat payload is invalid"),
     EXECUTION_DELIVERY_INVARIANT_VIOLATED(HttpStatus.INTERNAL_SERVER_ERROR, "EXECUTION_DELIVERY_INVARIANT_VIOLATED", "The Execution delivery assignment is invalid"),
     EXECUTION_NOT_FOUND(HttpStatus.NOT_FOUND, "EXECUTION_NOT_FOUND", "The Execution was not found"),
