@@ -31,7 +31,17 @@ sealed interface HighLevelCommandParameters {
 
     data class Move(val direction: MoveDirection, val distanceMeters: Double) : HighLevelCommandParameters
 
+    data class VelocityMove(
+        val linearVelocityMetersPerSecond: Double,
+        val durationSeconds: Double,
+    ) : HighLevelCommandParameters
+
     data class Turn(val direction: TurnDirection, val angleDegrees: Double) : HighLevelCommandParameters
+
+    data class VelocityTurn(
+        val angularVelocityDegreesPerSecond: Double,
+        val durationSeconds: Double,
+    ) : HighLevelCommandParameters
 
     data class PostureCommand(val posture: Posture) : HighLevelCommandParameters
 

@@ -33,17 +33,17 @@ class HighLevelCommandProtocolParser(
             fail(HighLevelCommandProtocolErrorCode.INVALID_FIELD, "protocolVersion must be an integer")
         }
         val version = versionNode.toString().toInt()
-        if (version != SUPPORTED_PROTOCOL_VERSION) {
+        if (version !in SUPPORTED_PROTOCOL_VERSIONS) {
             fail(HighLevelCommandProtocolErrorCode.UNSUPPORTED_PROTOCOL_VERSION, "protocolVersion $version is not supported")
         }
 
         val commandsNode = root.get("commands")
         if (!commandsNode.isArray) fail(HighLevelCommandProtocolErrorCode.INVALID_FIELD, "commands must be an array")
-        val commands = commandsNode.values().mapIndexed(::parseCommand)
+        val commands = commandsNode.values().mapIndexed { index, command -> parseCommand(index, command, version) }
         return HighLevelCommandProgram(protocolVersion = version, commands = commands)
     }
 
-    private fun parseCommand(index: Int, node: JsonNode): HighLevelCommand {
+    private fun parseCommand(index: Int, node: JsonNode, protocolVersion: Int): HighLevelCommand {
         if (!node.isObject) fail(HighLevelCommandProtocolErrorCode.INVALID_FIELD, "command must be an object")
         requireFields(node, setOf("sequence", "sourceBlockId", "type", "parameters"), "command")
 
@@ -77,11 +77,15 @@ class HighLevelCommandProtocolParser(
             sequence = sequence,
             sourceBlockId = sourceBlockIdNode.textValue(),
             type = type,
-            parameters = parseParameters(type, node.get("parameters")),
+            parameters = parseParameters(type, node.get("parameters"), protocolVersion),
         )
     }
 
-    private fun parseParameters(type: CommandType, node: JsonNode): HighLevelCommandParameters {
+    private fun parseParameters(
+        type: CommandType,
+        node: JsonNode,
+        protocolVersion: Int,
+    ): HighLevelCommandParameters {
         if (!node.isObject) fail(HighLevelCommandProtocolErrorCode.INVALID_PARAMETER, "parameters must be an object")
         return when (type) {
             CommandType.WAIT -> {
@@ -90,6 +94,16 @@ class HighLevelCommandProtocolParser(
             }
 
             CommandType.MOVE -> {
+                if (protocolVersion == 2) {
+                    requireParameterFields(node, setOf("linearVelocityMetersPerSecond", "durationSeconds"), type)
+                    return HighLevelCommandParameters.VelocityMove(
+                        linearVelocityMetersPerSecond = parseNonZeroNumber(
+                            node.get("linearVelocityMetersPerSecond"),
+                            "linearVelocityMetersPerSecond",
+                        ),
+                        durationSeconds = parsePositiveNumber(node.get("durationSeconds"), "durationSeconds"),
+                    )
+                }
                 requireParameterFields(node, setOf("direction", "distanceMeters"), type)
                 HighLevelCommandParameters.Move(
                     direction = parseMoveDirection(node.get("direction")),
@@ -98,6 +112,16 @@ class HighLevelCommandProtocolParser(
             }
 
             CommandType.TURN -> {
+                if (protocolVersion == 2) {
+                    requireParameterFields(node, setOf("angularVelocityDegreesPerSecond", "durationSeconds"), type)
+                    return HighLevelCommandParameters.VelocityTurn(
+                        angularVelocityDegreesPerSecond = parseNonZeroNumber(
+                            node.get("angularVelocityDegreesPerSecond"),
+                            "angularVelocityDegreesPerSecond",
+                        ),
+                        durationSeconds = parsePositiveNumber(node.get("durationSeconds"), "durationSeconds"),
+                    )
+                }
                 requireParameterFields(node, setOf("direction", "angleDegrees"), type)
                 HighLevelCommandParameters.Turn(
                     direction = parseTurnDirection(node.get("direction")),
@@ -132,6 +156,18 @@ class HighLevelCommandProtocolParser(
         if (value == null || !value.isFinite()) {
             fail(HighLevelCommandProtocolErrorCode.INVALID_PARAMETER, "$name must be a finite JSON number")
         }
+        return value
+    }
+
+    private fun parseNonZeroNumber(node: JsonNode, name: String): Double {
+        val value = parseNumber(node, name)
+        if (value == 0.0) fail(HighLevelCommandProtocolErrorCode.INVALID_PARAMETER, "$name must not be zero")
+        return value
+    }
+
+    private fun parsePositiveNumber(node: JsonNode, name: String): Double {
+        val value = parseNumber(node, name)
+        if (value <= 0.0) fail(HighLevelCommandProtocolErrorCode.INVALID_PARAMETER, "$name must be positive")
         return value
     }
 
@@ -199,5 +235,6 @@ class HighLevelCommandProtocolParser(
 
     companion object {
         const val SUPPORTED_PROTOCOL_VERSION = 1
+        val SUPPORTED_PROTOCOL_VERSIONS = setOf(1, 2)
     }
 }

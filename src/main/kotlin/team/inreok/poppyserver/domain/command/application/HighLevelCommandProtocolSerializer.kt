@@ -20,7 +20,7 @@ class HighLevelCommandProtocolSerializer(
     }
 
     private fun validateProgram(program: HighLevelCommandProgram) {
-        if (program.protocolVersion != HighLevelCommandProtocolParser.SUPPORTED_PROTOCOL_VERSION) {
+        if (program.protocolVersion !in HighLevelCommandProtocolParser.SUPPORTED_PROTOCOL_VERSIONS) {
             throw HighLevelCommandProtocolException(
                 HighLevelCommandProtocolErrorCode.UNSUPPORTED_PROTOCOL_VERSION,
                 "protocolVersion ${program.protocolVersion} is not supported",
@@ -39,20 +39,34 @@ class HighLevelCommandProtocolSerializer(
                     "sourceBlockId must be a non-blank string",
                 )
             }
-            validateParameters(command)
+            validateParameters(command, program.protocolVersion)
         }
     }
 
-    private fun validateParameters(command: HighLevelCommand) {
+    private fun validateParameters(command: HighLevelCommand, protocolVersion: Int) {
         val valid = when (command.type) {
             CommandType.WAIT -> command.parameters is HighLevelCommandParameters.Wait &&
                 command.parameters.durationSeconds.isFinite()
 
-            CommandType.MOVE -> command.parameters is HighLevelCommandParameters.Move &&
-                command.parameters.distanceMeters.isFinite()
+            CommandType.MOVE -> when (protocolVersion) {
+                1 -> command.parameters is HighLevelCommandParameters.Move &&
+                    command.parameters.distanceMeters.isFinite()
+                2 -> command.parameters is HighLevelCommandParameters.VelocityMove &&
+                    command.parameters.linearVelocityMetersPerSecond.isFinite() &&
+                    command.parameters.linearVelocityMetersPerSecond != 0.0 &&
+                    command.parameters.durationSeconds.isFinite() && command.parameters.durationSeconds > 0.0
+                else -> false
+            }
 
-            CommandType.TURN -> command.parameters is HighLevelCommandParameters.Turn &&
-                command.parameters.angleDegrees.isFinite()
+            CommandType.TURN -> when (protocolVersion) {
+                1 -> command.parameters is HighLevelCommandParameters.Turn &&
+                    command.parameters.angleDegrees.isFinite()
+                2 -> command.parameters is HighLevelCommandParameters.VelocityTurn &&
+                    command.parameters.angularVelocityDegreesPerSecond.isFinite() &&
+                    command.parameters.angularVelocityDegreesPerSecond != 0.0 &&
+                    command.parameters.durationSeconds.isFinite() && command.parameters.durationSeconds > 0.0
+                else -> false
+            }
 
             CommandType.STOP -> command.parameters == HighLevelCommandParameters.None
             CommandType.POSTURE -> command.parameters is HighLevelCommandParameters.PostureCommand
@@ -84,9 +98,19 @@ class HighLevelCommandProtocolSerializer(
                 node.put("distanceMeters", parameters.distanceMeters)
             }
 
+            is HighLevelCommandParameters.VelocityMove -> {
+                node.put("linearVelocityMetersPerSecond", parameters.linearVelocityMetersPerSecond)
+                node.put("durationSeconds", parameters.durationSeconds)
+            }
+
             is HighLevelCommandParameters.Turn -> {
                 node.put("direction", parameters.direction.name)
                 node.put("angleDegrees", parameters.angleDegrees)
+            }
+
+            is HighLevelCommandParameters.VelocityTurn -> {
+                node.put("angularVelocityDegreesPerSecond", parameters.angularVelocityDegreesPerSecond)
+                node.put("durationSeconds", parameters.durationSeconds)
             }
 
             is HighLevelCommandParameters.PostureCommand -> node.put("posture", parameters.posture.name)

@@ -46,6 +46,31 @@ class HighLevelCommandProtocolContractTest {
     }
 
     @Test
+    fun `v2 velocity commands serialize and round trip without v1 reinterpretation`() {
+        val program = HighLevelCommandProgram(
+            protocolVersion = 2,
+            commands = listOf(
+                command(0, "move", CommandType.MOVE, HighLevelCommandParameters.VelocityMove(-0.1, 0.5)),
+                command(1, "turn", CommandType.TURN, HighLevelCommandParameters.VelocityTurn(15.0, 0.5)),
+            ),
+        )
+
+        assertEquals(program, parser.parse(serializer.serialize(program)))
+    }
+
+    @Test
+    fun `v2 rejects zero non-finite and non-numeric motion parameters`() {
+        listOf(
+            """{"protocolVersion":2,"commands":[{"sequence":0,"sourceBlockId":"move","type":"MOVE","parameters":{"linearVelocityMetersPerSecond":0,"durationSeconds":1}}]}""",
+            """{"protocolVersion":2,"commands":[{"sequence":0,"sourceBlockId":"move","type":"MOVE","parameters":{"linearVelocityMetersPerSecond":true,"durationSeconds":1}}]}""",
+            """{"protocolVersion":2,"commands":[{"sequence":0,"sourceBlockId":"move","type":"MOVE","parameters":{"linearVelocityMetersPerSecond":0.1,"durationSeconds":0}}]}""",
+            """{"protocolVersion":2,"commands":[{"sequence":0,"sourceBlockId":"turn","type":"TURN","parameters":{"angularVelocityDegreesPerSecond":NaN,"durationSeconds":1}}]}""",
+        ).forEach { document ->
+            assertFailsWith<HighLevelCommandProtocolException> { parser.parse(document) }
+        }
+    }
+
+    @Test
     fun `parser rejects unknown fields and numeric coercion`() {
         assertFailsWith<HighLevelCommandProtocolException> {
             parser.parse("""{"protocolVersion":1,"commands":[],"extra":true}""")
@@ -62,7 +87,7 @@ class HighLevelCommandProtocolContractTest {
         assertEquals(
             HighLevelCommandProtocolErrorCode.UNSUPPORTED_PROTOCOL_VERSION,
             assertFailsWith<HighLevelCommandProtocolException> {
-                parser.parse("""{"protocolVersion":2,"commands":[]}""")
+                parser.parse("""{"protocolVersion":3,"commands":[]}""")
             }.code,
         )
         assertEquals(
