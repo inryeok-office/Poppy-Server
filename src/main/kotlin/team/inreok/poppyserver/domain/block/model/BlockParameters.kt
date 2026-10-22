@@ -11,5 +11,9 @@ sealed interface BlockParameters {
 
     data class AngleDegrees(val value: Double) : BlockParameters
 
+    data class VelocityMove(val linearVelocityMetersPerSecond: Double, val durationSeconds: Double) : BlockParameters
+
+    data class VelocityTurn(val angularVelocityDegreesPerSecond: Double, val durationSeconds: Double) : BlockParameters
+
     data class PresetCode(val value: String) : BlockParameters
 }

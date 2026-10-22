@@ -76,7 +76,7 @@ class BlockProgramContractTest {
 
     @Test
     fun `serializer rejects unsupported schema version`() {
-        val program = BlockProgram(schemaVersion = 2, blocks = emptyList())
+        val program = BlockProgram(schemaVersion = 3, blocks = emptyList())
 
         assertCodeFromSerializer(program, BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION)
     }
@@ -129,7 +129,7 @@ class BlockProgramContractTest {
         assertCode("[]", BlockProgramParseErrorCode.MALFORMED_JSON)
         assertCode("{\"blocks\":[]}", BlockProgramParseErrorCode.INVALID_FIELD)
         assertCode("{\"schemaVersion\":\"1\",\"blocks\":[]}", BlockProgramParseErrorCode.INVALID_FIELD)
-        assertCode("{\"schemaVersion\":2,\"blocks\":[]}", BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION)
+        assertCode("{\"schemaVersion\":3,\"blocks\":[]}", BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION)
         assertCode("{\"schemaVersion\":1}", BlockProgramParseErrorCode.INVALID_FIELD)
         assertCode("{\"schemaVersion\":1,\"blocks\":{}}", BlockProgramParseErrorCode.INVALID_FIELD)
         assertCode("{\"schemaVersion\":1,\"blocks\":[],\"extra\":true}", BlockProgramParseErrorCode.INVALID_FIELD)
@@ -184,6 +184,8 @@ class BlockProgramContractTest {
         BlockType.REPEAT -> "{\"count\":2}"
         BlockType.MOVE_FORWARD, BlockType.MOVE_BACKWARD -> "{\"distanceMeters\":1.0}"
         BlockType.TURN_LEFT, BlockType.TURN_RIGHT -> "{\"angleDegrees\":90.0}"
+        BlockType.MOVE_VELOCITY -> "{\"linearVelocityMetersPerSecond\":0.1,\"durationSeconds\":1.0}"
+        BlockType.TURN_VELOCITY -> "{\"angularVelocityDegreesPerSecond\":15.0,\"durationSeconds\":1.0}"
         BlockType.PRESET -> "{\"presetCode\":\"SAFE\"}"
         BlockType.START, BlockType.END, BlockType.STOP, BlockType.SIT, BlockType.STAND -> "{}"
     }

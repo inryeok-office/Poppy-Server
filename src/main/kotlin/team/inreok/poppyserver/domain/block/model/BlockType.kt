@@ -13,6 +13,8 @@ enum class BlockType(
     MOVE_BACKWARD(BlockCategory.MOVEMENT, "distanceMeters", ParameterType.NUMBER),
     TURN_LEFT(BlockCategory.MOVEMENT, "angleDegrees", ParameterType.NUMBER),
     TURN_RIGHT(BlockCategory.MOVEMENT, "angleDegrees", ParameterType.NUMBER),
+    MOVE_VELOCITY(BlockCategory.MOVEMENT),
+    TURN_VELOCITY(BlockCategory.MOVEMENT),
     STOP(BlockCategory.MOVEMENT),
     SIT(BlockCategory.ACTION),
     STAND(BlockCategory.ACTION),

@@ -20,7 +20,7 @@ class BlockProgramCompiler(
     private val blockProgramValidator: BlockProgramValidator,
 ) {
     fun compile(program: BlockProgram): HighLevelCommandProgram {
-        if (program.schemaVersion != SUPPORTED_SCHEMA_VERSION) {
+        if (program.schemaVersion !in SUPPORTED_SCHEMA_VERSIONS) {
             throw BlockProgramCompileException(
                 code = BlockProgramCompileErrorCode.UNSUPPORTED_SCHEMA_VERSION,
                 detail = "schemaVersion ${program.schemaVersion} is not supported",
@@ -45,9 +45,15 @@ class BlockProgramCompiler(
         }
 
         val commands = mutableListOf<HighLevelCommand>()
+        if (program.schemaVersion == 2 && program.blocks.any(::containsV1Motion)) {
+            throw BlockProgramCompileException(
+                code = BlockProgramCompileErrorCode.MIXED_MOTION_PROTOCOL,
+                detail = "schemaVersion 2 cannot contain v1 distance or angle motion blocks",
+            )
+        }
         appendCommands(program.blocks, commands)
         return HighLevelCommandProgram(
-            protocolVersion = HighLevelCommandProtocolParser.SUPPORTED_PROTOCOL_VERSION,
+            protocolVersion = program.schemaVersion,
             commands = commands,
         )
     }
@@ -139,6 +145,24 @@ class BlockProgramCompiler(
             },
         )
 
+        BlockType.MOVE_VELOCITY -> HighLevelCommand(
+            sequence = sequence,
+            sourceBlockId = block.id,
+            type = CommandType.MOVE,
+            parameters = expectParameters<BlockParameters.VelocityMove>(block) {
+                HighLevelCommandParameters.VelocityMove(it.linearVelocityMetersPerSecond, it.durationSeconds)
+            },
+        )
+
+        BlockType.TURN_VELOCITY -> HighLevelCommand(
+            sequence = sequence,
+            sourceBlockId = block.id,
+            type = CommandType.TURN,
+            parameters = expectParameters<BlockParameters.VelocityTurn>(block) {
+                HighLevelCommandParameters.VelocityTurn(it.angularVelocityDegreesPerSecond, it.durationSeconds)
+            },
+        )
+
         BlockType.STOP -> HighLevelCommand(
             sequence = sequence,
             sourceBlockId = block.id,
@@ -213,8 +237,13 @@ class BlockProgramCompiler(
             detail = "${block.type.name} parameters do not match the Block Program model",
         )
 
+    private fun containsV1Motion(block: BlockInstance): Boolean =
+        block.type in setOf(BlockType.MOVE_FORWARD, BlockType.MOVE_BACKWARD, BlockType.TURN_LEFT, BlockType.TURN_RIGHT) ||
+            block.children.orEmpty().any(::containsV1Motion)
+
     companion object {
         const val SUPPORTED_SCHEMA_VERSION = 1
+        val SUPPORTED_SCHEMA_VERSIONS = setOf(1, 2)
     }
 }
 
@@ -223,6 +252,7 @@ enum class BlockProgramCompileErrorCode {
     UNSUPPORTED_SCHEMA_VERSION,
     INVALID_REPEAT_COUNT,
     COMMAND_COUNT_OVERFLOW,
+    MIXED_MOTION_PROTOCOL,
 }
 
 class BlockProgramCompileException(

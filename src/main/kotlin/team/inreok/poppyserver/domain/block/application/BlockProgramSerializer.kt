@@ -20,7 +20,7 @@ class BlockProgramSerializer(
     }
 
     private fun validateProgram(program: BlockProgram) {
-        if (program.schemaVersion != BlockProgramParser.SUPPORTED_SCHEMA_VERSION) {
+        if (program.schemaVersion !in BlockProgramParser.SUPPORTED_SCHEMA_VERSIONS) {
             throw BlockProgramParseException(
                 BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION,
                 "schemaVersion ${program.schemaVersion} is not supported",
@@ -60,6 +60,14 @@ class BlockProgramSerializer(
                 parameters is BlockParameters.DistanceMeters && parameters.value.isFinite()
             BlockType.TURN_LEFT, BlockType.TURN_RIGHT ->
                 parameters is BlockParameters.AngleDegrees && parameters.value.isFinite()
+            BlockType.MOVE_VELOCITY -> parameters is BlockParameters.VelocityMove &&
+                parameters.linearVelocityMetersPerSecond.isFinite() &&
+                parameters.linearVelocityMetersPerSecond != 0.0 &&
+                parameters.durationSeconds.isFinite() && parameters.durationSeconds > 0.0
+            BlockType.TURN_VELOCITY -> parameters is BlockParameters.VelocityTurn &&
+                parameters.angularVelocityDegreesPerSecond.isFinite() &&
+                parameters.angularVelocityDegreesPerSecond != 0.0 &&
+                parameters.durationSeconds.isFinite() && parameters.durationSeconds > 0.0
             BlockType.PRESET -> parameters is BlockParameters.PresetCode
             BlockType.START, BlockType.END, BlockType.STOP, BlockType.SIT, BlockType.STAND ->
                 parameters == BlockParameters.None
@@ -97,6 +105,14 @@ class BlockProgramSerializer(
                 node.put("distanceMeters", (parameters as BlockParameters.DistanceMeters).value)
             BlockType.TURN_LEFT, BlockType.TURN_RIGHT ->
                 node.put("angleDegrees", (parameters as BlockParameters.AngleDegrees).value)
+            BlockType.MOVE_VELOCITY -> (parameters as BlockParameters.VelocityMove).also {
+                node.put("linearVelocityMetersPerSecond", it.linearVelocityMetersPerSecond)
+                node.put("durationSeconds", it.durationSeconds)
+            }
+            BlockType.TURN_VELOCITY -> (parameters as BlockParameters.VelocityTurn).also {
+                node.put("angularVelocityDegreesPerSecond", it.angularVelocityDegreesPerSecond)
+                node.put("durationSeconds", it.durationSeconds)
+            }
             BlockType.PRESET -> node.put("presetCode", (parameters as BlockParameters.PresetCode).value)
             BlockType.START, BlockType.END, BlockType.STOP, BlockType.SIT, BlockType.STAND ->
                 require(parameters == BlockParameters.None) { "${type.name} must not have parameters" }

@@ -27,18 +27,18 @@ class BlockProgramParser(
             fail(BlockProgramParseErrorCode.INVALID_FIELD, "schemaVersion must be an integer")
         }
         val version = schemaVersion.toString().toInt()
-        if (version != SUPPORTED_SCHEMA_VERSION) {
+        if (version !in SUPPORTED_SCHEMA_VERSIONS) {
             fail(BlockProgramParseErrorCode.UNSUPPORTED_SCHEMA_VERSION, "schemaVersion $version is not supported")
         }
         val blocksNode = root.get("blocks")
         if (!blocksNode.isArray) {
             fail(BlockProgramParseErrorCode.INVALID_FIELD, "blocks must be an array")
         }
-        val blocks = blocksNode.values().map(::parseBlock)
+        val blocks = blocksNode.values().map { parseBlock(it, version) }
         return BlockProgram(schemaVersion = version, blocks = blocks)
     }
 
-    private fun parseBlock(node: JsonNode): BlockInstance {
+    private fun parseBlock(node: JsonNode, schemaVersion: Int): BlockInstance {
         if (!node.isObject) {
             fail(BlockProgramParseErrorCode.INVALID_FIELD, "block must be an object")
         }
@@ -61,7 +61,7 @@ class BlockProgramParser(
             if (!childrenNode.isArray) {
                 fail(BlockProgramParseErrorCode.INVALID_FIELD, "REPEAT children must be an array")
             }
-            childrenNode.values().map(::parseBlock)
+            childrenNode.values().map { parseBlock(it, schemaVersion) }
         } else {
             null
         }
@@ -92,6 +92,20 @@ class BlockProgramParser(
         if (!node.isObject) {
             fail(BlockProgramParseErrorCode.INVALID_FIELD, "parameters must be an object")
         }
+        if (type == BlockType.MOVE_VELOCITY) {
+            requireVelocityFields(node, "linearVelocityMetersPerSecond")
+            return BlockParameters.VelocityMove(
+                parseNonZeroNumber(node.get("linearVelocityMetersPerSecond"), "linearVelocityMetersPerSecond"),
+                parsePositiveNumber(node.get("durationSeconds"), "durationSeconds"),
+            )
+        }
+        if (type == BlockType.TURN_VELOCITY) {
+            requireVelocityFields(node, "angularVelocityDegreesPerSecond")
+            return BlockParameters.VelocityTurn(
+                parseNonZeroNumber(node.get("angularVelocityDegreesPerSecond"), "angularVelocityDegreesPerSecond"),
+                parsePositiveNumber(node.get("durationSeconds"), "durationSeconds"),
+            )
+        }
         val parameterName = type.parameterName
         val expectedFields = parameterName?.let(::setOf) ?: emptySet()
         val actualFields = node.properties().map { it.key }.toSet()
@@ -115,6 +129,7 @@ class BlockProgramParser(
             BlockType.TURN_LEFT, BlockType.TURN_RIGHT ->
                 BlockParameters.AngleDegrees(parseNumber(parameter, parameterName))
             BlockType.PRESET -> BlockParameters.PresetCode(parseEnum(parameter, parameterName))
+            BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY -> BlockParameters.None
             else -> BlockParameters.None
         }
     }
@@ -128,6 +143,24 @@ class BlockProgramParser(
             fail(BlockProgramParseErrorCode.INVALID_PARAMETER, "$name must be a finite JSON number")
         }
         return value
+    }
+
+    private fun parseNonZeroNumber(node: JsonNode, name: String): Double {
+        val value = parseNumber(node, name)
+        if (value == 0.0) fail(BlockProgramParseErrorCode.INVALID_PARAMETER, "$name must not be zero")
+        return value
+    }
+
+    private fun parsePositiveNumber(node: JsonNode, name: String): Double {
+        val value = parseNumber(node, name)
+        if (value <= 0.0) fail(BlockProgramParseErrorCode.INVALID_PARAMETER, "$name must be positive")
+        return value
+    }
+
+    private fun requireVelocityFields(node: JsonNode, velocityName: String) {
+        val expected = setOf(velocityName, "durationSeconds")
+        val actual = node.properties().map { it.key }.toSet()
+        if (actual != expected) fail(BlockProgramParseErrorCode.INVALID_FIELD, "velocity parameters fields are invalid")
     }
 
     private fun parseInteger(node: JsonNode, name: String): Long {
@@ -174,5 +207,6 @@ class BlockProgramParser(
 
     companion object {
         const val SUPPORTED_SCHEMA_VERSION = 1
+        val SUPPORTED_SCHEMA_VERSIONS = setOf(1, 2)
     }
 }

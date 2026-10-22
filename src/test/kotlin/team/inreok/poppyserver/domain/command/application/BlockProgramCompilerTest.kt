@@ -109,10 +109,29 @@ class BlockProgramCompilerTest {
     @Test
     fun `compiler rejects an unsupported schema version`() {
         val exception = assertFailsWith<BlockProgramCompileException> {
-            compiler.compile(BlockProgram(2, listOf(block("start", BlockType.START), block("end", BlockType.END))))
+            compiler.compile(BlockProgram(3, listOf(block("start", BlockType.START), block("end", BlockType.END))))
         }
 
         assertEquals(BlockProgramCompileErrorCode.UNSUPPORTED_SCHEMA_VERSION, exception.code)
+    }
+
+    @Test
+    fun `schema version two compiles velocity motion without v1 reinterpretation`() {
+        val compiled = compiler.compile(
+            BlockProgram(
+                2,
+                listOf(
+                    block("start", BlockType.START),
+                    block("move", BlockType.MOVE_VELOCITY, BlockParameters.VelocityMove(-0.1, 1.0)),
+                    block("turn", BlockType.TURN_VELOCITY, BlockParameters.VelocityTurn(15.0, 1.0)),
+                    block("end", BlockType.END),
+                ),
+            ),
+        )
+
+        assertEquals(2, compiled.protocolVersion)
+        assertEquals(HighLevelCommandParameters.VelocityMove(-0.1, 1.0), compiled.commands[0].parameters)
+        assertEquals(HighLevelCommandParameters.VelocityTurn(15.0, 1.0), compiled.commands[1].parameters)
     }
 
     @Test
