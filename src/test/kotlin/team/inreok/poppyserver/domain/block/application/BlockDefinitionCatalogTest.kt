@@ -10,13 +10,13 @@ class BlockDefinitionCatalogTest {
     private val definitions = BlockDefinitionCatalog().list()
 
     @Test
-    fun `catalog contains every Block Program v1 type in stable order`() {
+    fun `catalog contains every Block Program type in stable order`() {
         assertEquals(BlockType.entries, definitions.map { it.type })
         assertEquals(definitions.size, definitions.map { it.type }.toSet().size)
     }
 
     @Test
-    fun `parameter metadata matches the Block Program v1 contract`() {
+    fun `parameter metadata matches the Block Program contract`() {
         val byType = definitions.associateBy { it.type }
 
         assertParameter(byType[BlockType.WAIT], "durationSeconds", ParameterType.NUMBER, "s")
@@ -27,12 +27,13 @@ class BlockDefinitionCatalogTest {
         assertParameter(byType[BlockType.TURN_RIGHT], "angleDegrees", ParameterType.NUMBER, "deg")
         assertParameter(byType[BlockType.PRESET], "presetCode", ParameterType.ENUM, null)
 
-        definitions.filter { it.type.parameterName == null }.forEach { definition ->
+        definitions.filter { it.type.parameterName == null && it.type !in setOf(BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY) }.forEach { definition ->
             assertTrue(definition.parameters.isEmpty())
         }
         assertTrue(byType.getValue(BlockType.PRESET).parameters.single().options.isEmpty())
         assertTrue(definitions.all { definition -> definition.parameters.all { it.min == null && it.max == null } })
-        assertTrue(definitions.none { definition -> definition.parameters.any { it.name.contains("velocity", ignoreCase = true) } })
+        assertTrue(byType.getValue(BlockType.MOVE_VELOCITY).available.not())
+        assertTrue(byType.getValue(BlockType.TURN_VELOCITY).available.not())
     }
 
     private fun assertParameter(

@@ -20,6 +20,28 @@ class BlockDefinitionCatalog {
             definition(BlockType.MOVE_BACKWARD, "뒤로 이동", unit = "m"),
             definition(BlockType.TURN_LEFT, "왼쪽 회전", unit = "deg"),
             definition(BlockType.TURN_RIGHT, "오른쪽 회전", unit = "deg"),
+            BlockDefinition(
+                type = BlockType.MOVE_VELOCITY,
+                displayName = "속도 이동(v2)",
+                category = BlockCategory.MOVEMENT,
+                parameters = listOf(
+                    ParameterDefinition("linearVelocityMetersPerSecond", team.inreok.poppyserver.domain.block.model.ParameterType.NUMBER, "m/s", true),
+                    ParameterDefinition("durationSeconds", team.inreok.poppyserver.domain.block.model.ParameterType.NUMBER, "s", true),
+                ),
+                available = false,
+                freeModeAllowed = false,
+            ),
+            BlockDefinition(
+                type = BlockType.TURN_VELOCITY,
+                displayName = "속도 회전(v2)",
+                category = BlockCategory.MOVEMENT,
+                parameters = listOf(
+                    ParameterDefinition("angularVelocityDegreesPerSecond", team.inreok.poppyserver.domain.block.model.ParameterType.NUMBER, "deg/s", true),
+                    ParameterDefinition("durationSeconds", team.inreok.poppyserver.domain.block.model.ParameterType.NUMBER, "s", true),
+                ),
+                available = false,
+                freeModeAllowed = false,
+            ),
             definition(BlockType.STOP, "정지"),
             definition(BlockType.SIT, "앉기"),
             definition(BlockType.STAND, "일어서기"),
