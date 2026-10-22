@@ -45,6 +45,7 @@ class BlockProgramParser(
         requirePresentFields(node, setOf("id", "type", "parameters"), "block")
         val typeNode = node.get("type")
         val type = parseType(typeNode)
+        requireTypeForSchema(type, schemaVersion)
         val allowedFields = if (type == BlockType.REPEAT) {
             setOf("id", "type", "parameters", "children")
         } else {
@@ -84,6 +85,22 @@ class BlockProgramParser(
                 BlockProgramParseErrorCode.UNKNOWN_BLOCK_TYPE,
                 "unknown block type ${node.textValue()}",
                 exception,
+            )
+        }
+    }
+
+    private fun requireTypeForSchema(type: BlockType, schemaVersion: Int) {
+        val legacyMotion = setOf(
+            BlockType.MOVE_FORWARD,
+            BlockType.MOVE_BACKWARD,
+            BlockType.TURN_LEFT,
+            BlockType.TURN_RIGHT,
+        )
+        val velocityMotion = setOf(BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY)
+        if ((schemaVersion == 1 && type in velocityMotion) || (schemaVersion == 2 && type in legacyMotion)) {
+            fail(
+                BlockProgramParseErrorCode.INVALID_FIELD,
+                "${type.name} is not valid for schemaVersion $schemaVersion",
             )
         }
     }

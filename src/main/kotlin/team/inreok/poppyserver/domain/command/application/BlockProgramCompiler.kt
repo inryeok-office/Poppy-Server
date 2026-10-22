@@ -51,6 +51,12 @@ class BlockProgramCompiler(
                 detail = "schemaVersion 2 cannot contain v1 distance or angle motion blocks",
             )
         }
+        if (program.schemaVersion == 1 && program.blocks.any(::containsV2Motion)) {
+            throw BlockProgramCompileException(
+                code = BlockProgramCompileErrorCode.MIXED_MOTION_PROTOCOL,
+                detail = "schemaVersion 1 cannot contain v2 velocity motion blocks",
+            )
+        }
         appendCommands(program.blocks, commands)
         return HighLevelCommandProgram(
             protocolVersion = program.schemaVersion,
@@ -240,6 +246,10 @@ class BlockProgramCompiler(
     private fun containsV1Motion(block: BlockInstance): Boolean =
         block.type in setOf(BlockType.MOVE_FORWARD, BlockType.MOVE_BACKWARD, BlockType.TURN_LEFT, BlockType.TURN_RIGHT) ||
             block.children.orEmpty().any(::containsV1Motion)
+
+    private fun containsV2Motion(block: BlockInstance): Boolean =
+        block.type in setOf(BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY) ||
+            block.children.orEmpty().any(::containsV2Motion)
 
     companion object {
         const val SUPPORTED_SCHEMA_VERSION = 1

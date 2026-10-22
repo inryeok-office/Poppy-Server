@@ -39,9 +39,26 @@ class BlockProgramContractTest {
             } else {
                 block
             }
-            val parsed = parser.parse(programJson(blockWithChildren))
+            val schemaVersion = if (type in setOf(BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY)) 2 else 1
+            val parsed = parser.parse(programJson(blockWithChildren, schemaVersion))
             assertEquals(type, parsed.blocks.single().type)
         }
+    }
+
+    @Test
+    fun `contract rejects motion blocks from another schema version`() {
+        assertCode(
+            programJson(blockJson("velocity", "MOVE_VELOCITY", "{\"linearVelocityMetersPerSecond\":0.1,\"durationSeconds\":1}")),
+            BlockProgramParseErrorCode.INVALID_FIELD,
+        )
+        assertCode(
+            programJson(blockJson("legacy", "MOVE_FORWARD", "{\"distanceMeters\":1}"), schemaVersion = 2),
+            BlockProgramParseErrorCode.INVALID_FIELD,
+        )
+        assertCodeFromSerializer(
+            BlockProgram(1, listOf(BlockInstance("velocity", BlockType.MOVE_VELOCITY, BlockParameters.VelocityMove(0.1, 1.0)))),
+            BlockProgramParseErrorCode.INVALID_FIELD,
+        )
     }
 
     @Test
@@ -171,7 +188,8 @@ class BlockProgramContractTest {
         assertEquals(expected, exception.code)
     }
 
-    private fun programJson(block: String): String = "{\"schemaVersion\":1,\"blocks\":[$block]}"
+    private fun programJson(block: String, schemaVersion: Int = 1): String =
+        "{\"schemaVersion\":$schemaVersion,\"blocks\":[$block]}"
 
     private fun blockJson(id: String, type: String, parameters: String): String =
         "{\"id\":\"$id\",\"type\":\"$type\",\"parameters\":$parameters}"

@@ -28,13 +28,13 @@ class BlockDefinitionControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.schemaVersion").value(1))
-            .andExpect(jsonPath("$.data.blocks.length()").value(12))
+            .andExpect(jsonPath("$.data.blocks.length()").value(14))
             .andExpect(jsonPath("$.data.blocks[0].type").value("START"))
             .andExpect(jsonPath("$.data.blocks[1].parameters[0].name").value("durationSeconds"))
             .andExpect(jsonPath("$.data.blocks[1].parameters[0].type").value("NUMBER"))
-            .andExpect(jsonPath("$.data.blocks[11].type").value("PRESET"))
-            .andExpect(jsonPath("$.data.blocks[11].available").value(false))
-            .andExpect(jsonPath("$.data.blocks[11].parameters[0].options.length()").value(0))
+            .andExpect(jsonPath("$.data.blocks[13].type").value("PRESET"))
+            .andExpect(jsonPath("$.data.blocks[13].available").value(false))
+            .andExpect(jsonPath("$.data.blocks[13].parameters[0].options.length()").value(0))
             .andExpect(jsonPath("$.error").value(null))
     }
 }

@@ -26,16 +26,17 @@ class BlockProgramSerializer(
                 "schemaVersion ${program.schemaVersion} is not supported",
             )
         }
-        program.blocks.forEach(::validateBlock)
+        program.blocks.forEach { validateBlock(it, program.schemaVersion) }
     }
 
-    private fun validateBlock(block: BlockInstance) {
+    private fun validateBlock(block: BlockInstance, schemaVersion: Int) {
         if (block.id.isBlank()) {
             throw BlockProgramParseException(
                 BlockProgramParseErrorCode.INVALID_FIELD,
                 "block id must be a non-blank string",
             )
         }
+        validateTypeForSchema(block.type, schemaVersion)
         validateParameters(block.type, block.parameters)
         if (block.type == BlockType.REPEAT) {
             val children = block.children
@@ -43,11 +44,27 @@ class BlockProgramSerializer(
                     BlockProgramParseErrorCode.INVALID_FIELD,
                     "REPEAT children must be present",
                 )
-            children.forEach(::validateBlock)
+            children.forEach { validateBlock(it, schemaVersion) }
         } else if (block.children != null) {
             throw BlockProgramParseException(
                 BlockProgramParseErrorCode.INVALID_FIELD,
                 "non-REPEAT block cannot have children",
+            )
+        }
+    }
+
+    private fun validateTypeForSchema(type: BlockType, schemaVersion: Int) {
+        val legacyMotion = setOf(
+            BlockType.MOVE_FORWARD,
+            BlockType.MOVE_BACKWARD,
+            BlockType.TURN_LEFT,
+            BlockType.TURN_RIGHT,
+        )
+        val velocityMotion = setOf(BlockType.MOVE_VELOCITY, BlockType.TURN_VELOCITY)
+        if ((schemaVersion == 1 && type in velocityMotion) || (schemaVersion == 2 && type in legacyMotion)) {
+            throw BlockProgramParseException(
+                BlockProgramParseErrorCode.INVALID_FIELD,
+                "${type.name} is not valid for schemaVersion $schemaVersion",
             )
         }
     }

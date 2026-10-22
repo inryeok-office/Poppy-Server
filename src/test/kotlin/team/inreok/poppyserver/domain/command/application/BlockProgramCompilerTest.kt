@@ -135,6 +135,24 @@ class BlockProgramCompilerTest {
     }
 
     @Test
+    fun `schema version one rejects velocity motion`() {
+        val exception = assertFailsWith<BlockProgramCompileException> {
+            compiler.compile(
+                BlockProgram(
+                    1,
+                    listOf(
+                        block("start", BlockType.START),
+                        block("move", BlockType.MOVE_VELOCITY, BlockParameters.VelocityMove(0.1, 1.0)),
+                        block("end", BlockType.END),
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(BlockProgramCompileErrorCode.MIXED_MOTION_PROTOCOL, exception.code)
+    }
+
+    @Test
     fun `negative repeat count is rejected`() {
         val exception = assertFailsWith<BlockProgramCompileException> {
             compiler.compile(
