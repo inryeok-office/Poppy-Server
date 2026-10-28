@@ -15,13 +15,14 @@ class MissionCatalogTest {
         .toSet()
 
     @Test
-    fun `catalog는 5번을 제외한 8개 미션을 원본 순서대로 포함한다`() {
+    fun `catalog는 Notion 미션 9종을 원본 순서대로 포함한다`() {
         assertEquals(
             listOf(
                 "로봇 택배 배달",
                 "뒤를 봐!",
                 "인사하고 출발!",
                 "편의점 심부름",
+                "무대 중앙에서 포즈",
                 "집으로 돌아가기",
                 "사각 순찰대",
                 "숫자 8 드라이브",
@@ -29,6 +30,24 @@ class MissionCatalogTest {
             ),
             missions.map { it.title },
         )
+    }
+
+    @Test
+    fun `무대 중앙에서 포즈는 이동·회전·정지·대기·특수 동작을 허용한다`() {
+        val mission = missions.single { it.title == "무대 중앙에서 포즈" }
+
+        assertEquals(
+            listOf(
+                BlockType.MOVE_FORWARD,
+                BlockType.TURN_LEFT,
+                BlockType.TURN_RIGHT,
+                BlockType.STOP,
+                BlockType.WAIT,
+                BlockType.PRESET,
+            ),
+            mission.allowedBlocks,
+        )
+        assertEquals(team.inreok.poppyserver.domain.mission.model.MissionDifficulty.NORMAL, mission.difficulty)
     }
 
     @Test
