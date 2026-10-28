@@ -96,3 +96,21 @@ sudo systemctl status poppy-server.service
 ```
 
 운영 env 파일은 repository 업데이트로 덮어쓰지 않는다. `docker compose down -v`, DB volume 삭제, 임의의 credential 생성을 이 절차에 포함하지 않는다.
+
+## CD (GitHub Actions)
+
+`develop` push 또는 수동 실행(`workflow_dispatch`)으로 시작하며, job 은 `production` environment 의 승인을
+기다린다. 저장소 Settings → Environments → `production` 에 required reviewers 를 지정해야 승인 대기가 걸린다
+(지정하지 않으면 바로 진행된다).
+
+CD 는 운영 compose 구성에서만 배포한다.
+
+- 사전 검사: `/etc/poppy-server/compose.yaml`·`/etc/poppy-server/poppy-server.env` 가 있어야 하고, env 파일의 필수 키
+  7개(`SPRING_PROFILES_ACTIVE`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `POPPY_AGENT_TOKEN`, `POPPY_ADMIN_USERNAME`,
+  `POPPY_ADMIN_PASSWORD_HASH`)가 값과 함께 있어야 한다(개수만 출력). compose.yaml 은 app 이미지를
+  `POPPY_SERVER_IMAGE_TAG` 로 골라야 한다(예: `image: poppy-server:${POPPY_SERVER_IMAGE_TAG}`). 하나라도 아니면
+  아무것도 바꾸지 않고 실패한다.
+- 배포: `~/Poppy-Server` checkout 에서 `poppy-server:<짧은 sha>` 이미지를 빌드한 뒤
+  `docker compose -p poppy-server --project-directory /etc/poppy-server -f /etc/poppy-server/compose.yaml --env-file /etc/poppy-server/poppy-server.env up -d --no-build app`.
+  `--env-file` 이 빠지면 빈 값으로 기동되므로(2026-10-28 사고) 이 구성 밖의 `docker compose up` 은 쓰지 않는다.
+- 롤백: 배포 로그의 "Current app image" 에 나온 이전 태그로 같은 명령을 `POPPY_SERVER_IMAGE_TAG=<이전 태그>` 와 함께 실행한다.
