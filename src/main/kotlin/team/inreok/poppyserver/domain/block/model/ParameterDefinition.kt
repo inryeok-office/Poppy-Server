@@ -8,4 +8,5 @@ data class ParameterDefinition(
     val min: Double? = null,
     val max: Double? = null,
     val options: List<String> = emptyList(),
+    val optionLabels: Map<String, String> = emptyMap(),
 )
