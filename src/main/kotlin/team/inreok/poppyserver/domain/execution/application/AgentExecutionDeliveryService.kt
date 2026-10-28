@@ -1,6 +1,7 @@
 package team.inreok.poppyserver.domain.execution.application
 
 import java.util.UUID
+import tools.jackson.databind.ObjectMapper
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
@@ -16,6 +17,7 @@ import team.inreok.poppyserver.global.error.ErrorCode
 class AgentExecutionDeliveryService(
     private val agentRepository: AgentRepository,
     private val executionDeliveryQueryRepository: ExecutionDeliveryQueryRepository,
+    private val objectMapper: ObjectMapper,
 ) {
     @Transactional(readOnly = true)
     fun findNext(agentId: UUID, robotId: UUID): AgentExecutionDelivery? {
@@ -42,13 +44,18 @@ class AgentExecutionDeliveryService(
             executionId = executionId,
             robotId = assignment.robotId,
             status = assignment.executionStatus,
-            protocolVersion = PROTOCOL_VERSION,
+            protocolVersion = protocolVersion(commandPayload),
             commandPayload = commandPayload,
         )
     }
 
-    companion object {
-        private const val PROTOCOL_VERSION = 1
+    private fun protocolVersion(commandPayload: String): Int = try {
+        objectMapper.readTree(commandPayload).get("protocolVersion")?.takeIf { it.isIntegralNumber }?.asInt()
+            ?: throw ApplicationException(ErrorCode.EXECUTION_DELIVERY_INVARIANT_VIOLATED)
+    } catch (exception: ApplicationException) {
+        throw exception
+    } catch (_: Exception) {
+        throw ApplicationException(ErrorCode.EXECUTION_DELIVERY_INVARIANT_VIOLATED)
     }
 }
 
