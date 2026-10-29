@@ -56,6 +56,7 @@ class ExecutionRequestServiceTest {
                 override fun save(pass: SimulationPass): SimulationPass = pass
                 override fun findById(sessionId: UUID, blockVersion: Long): SimulationPass =
                     SimulationPass.create(sessionId, blockVersion)
+                override fun deleteAllBySessionId(sessionId: UUID) = Unit
             },
             executionRepository = executionRepository,
             executionStatusEventPublisher = object : ExecutionStatusEventPublisher {
