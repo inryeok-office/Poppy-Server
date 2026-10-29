@@ -58,7 +58,7 @@ catalog 에 추가했다(Issue #119). allowedBlocks 는 `MOVE_FORWARD`, `TURN_LE
 
 ## 최소 블록 챌린지의 최대 블록 수
 
-9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다. 완료 판정 규칙의 `maxBlockCount`도 숫자가 정해질 때까지 비워 둔다.
+9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다. 완료 판정 규칙의 `maxBlockCount`는 4로 정했다(2026-10-29 운영 결정, 교사 확인 필요 — `mission-completion.md` 참고).
 
 ## allowedBlocks와 BlockDefinitionCatalog의 관계
 

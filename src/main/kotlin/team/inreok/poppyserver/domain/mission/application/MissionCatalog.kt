@@ -257,7 +257,7 @@ class MissionCatalog {
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
                 ),
-                completionRule = MissionCompletionRule(),
+                completionRule = MissionCompletionRule(maxBlockCount = 4),
             ),
         )
     }

@@ -137,6 +137,19 @@ class MissionCatalogTest {
         assertFalse(result.passed)
     }
 
+    @Test
+    fun `최소 블록 챌린지는 START END 를 빼고 반복 블록을 1개로 세어 4개까지 통과한다`() {
+        val mission = missions.single { it.title == "최소 블록 챌린지" }
+        val four = listOf(repeat(4, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT)), b(BlockType.STOP))
+        val five = four + b(BlockType.STOP)
+
+        assertEquals(4, mission.completionRule.maxBlockCount)
+        assertTrue(mission.completionRule.evaluate(BlockProgram(1, listOf(b(BlockType.START)) + four + b(BlockType.END))).passed)
+        val result = mission.completionRule.evaluate(BlockProgram(1, listOf(b(BlockType.START)) + five + b(BlockType.END)))
+        assertFalse(result.passed)
+        assertEquals("5 > 4", result.reasons.single().detail)
+    }
+
     private fun b(type: BlockType): BlockInstance = BlockInstance(id = type.name, type = type, parameters = BlockParameters.None)
 
     private fun repeat(count: Long, vararg children: BlockInstance): BlockInstance =
