@@ -21,10 +21,14 @@ import team.inreok.poppyserver.domain.execution.application.ExecutionRequestResu
 import team.inreok.poppyserver.domain.execution.application.ExecutionRequestService
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
+import team.inreok.poppyserver.domain.robot.application.RobotRepository
+import team.inreok.poppyserver.domain.robot.model.Robot
 import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SessionCreationResult
+import team.inreok.poppyserver.domain.session.application.SessionExperienceService
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SimulationPassService
+import team.inreok.poppyserver.domain.session.model.ExperienceMode
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
@@ -56,6 +60,12 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var simulationPassService: SimulationPassService
+
+    @Autowired
+    lateinit var robotRepository: RobotRepository
+
+    @Autowired
+    lateinit var sessionExperienceService: SessionExperienceService
 
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
@@ -336,6 +346,85 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error.code").value("SESSION_NOT_FOUND"))
     }
+
+    @Test
+    fun `MISSION 세션의 실행은 요청 시점 missionId를 저장한다`() {
+        val missionId = UUID.fromString("f3f450e4-8faf-4d2e-b2aa-6f76ac115412")
+        val session = sessionService.createSession()
+        sessionExperienceService.changeExperience(session.sessionId, ExperienceMode.MISSION, missionId)
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
+        simulationPassService.recordSimulationPass(session.sessionId, 1)
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+
+        assertEquals(missionId, executionRepository.findById(result.executionId)?.missionId)
+    }
+
+    @Test
+    fun `모드 미선택 세션의 실행은 missionId가 없다`() {
+        val session = preparedSession()
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+
+        assertNull(executionRepository.findById(result.executionId)?.missionId)
+    }
+
+    @Test
+    fun `robotAlias를 지정하면 활성 Robot ID를 requestedRobotId로 저장한다`() {
+        val alias = "select-${UUID.randomUUID()}"
+        val robot = inTransaction { robotRepository.save(Robot.register(alias = alias, model = "GO2")) }
+        val session = preparedSession()
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1, alias)
+
+        assertEquals(robot.id, executionRepository.findById(result.executionId)?.requestedRobotId)
+    }
+
+    @Test
+    fun `robotAlias를 생략하면 requestedRobotId가 없다`() {
+        val session = preparedSession()
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+
+        assertNull(executionRepository.findById(result.executionId)?.requestedRobotId)
+    }
+
+    @Test
+    fun `없는 alias나 비활성 Robot alias는 ROBOT_NOT_FOUND이고 실행을 만들지 않는다`() {
+        val retiredAlias = "retired-${UUID.randomUUID()}"
+        inTransaction { robotRepository.save(Robot.register(alias = retiredAlias, model = "GO2").apply { deactivate() }) }
+        val session = preparedSession()
+
+        listOf("unknown-${UUID.randomUUID()}", retiredAlias).forEach { alias ->
+            mockMvc.perform(
+                post("/api/v1/sessions/${session.sessionId}/executions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("X-Session-Token", session.sessionToken)
+                    .content("{\"blockVersion\":1,\"robotAlias\":\"$alias\"}"),
+            )
+                .andExpect(status().isNotFound)
+                .andExpect(jsonPath("$.error.code").value("ROBOT_NOT_FOUND"))
+        }
+        assertNull(executionRepository.findActiveBySessionId(session.sessionId))
+    }
+
+    @Test
+    fun `공백 robotAlias는 COMMON_400이다`() {
+        val session = preparedSession()
+
+        mockMvc.perform(
+            post("/api/v1/sessions/${session.sessionId}/executions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Session-Token", session.sessionToken)
+                .content("{\"blockVersion\":1,\"robotAlias\":\"  \"}"),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error.code").value("COMMON_400"))
+    }
+
+    private fun <T> inTransaction(block: () -> T): T = requireNotNull(
+        TransactionTemplate(transactionManager).execute { block() },
+    )
 
     private fun preparedSession(): SessionCreationResult {
         val session = sessionService.createSession()

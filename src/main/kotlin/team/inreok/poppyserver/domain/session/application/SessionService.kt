@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.block.application.BlockProgramParseException
 import team.inreok.poppyserver.domain.block.application.BlockProgramParser
+import team.inreok.poppyserver.domain.block.application.BlockProgramLimitValidator
 import team.inreok.poppyserver.domain.block.application.BlockProgramValidator
+import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.session.model.BlockRevision
 import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.global.error.ApplicationException
@@ -23,6 +25,8 @@ class SessionService(
     private val recoveryCodeIssuer: RecoveryCodeIssuer,
     private val blockProgramParser: BlockProgramParser,
     private val blockProgramValidator: BlockProgramValidator,
+    private val missionBlockGuard: MissionBlockGuard,
+    private val blockProgramLimitValidator: BlockProgramLimitValidator,
 ) {
     @Transactional
     fun createSession(): SessionCreationResult {
@@ -46,7 +50,8 @@ class SessionService(
     fun appendBlockRevision(sessionId: UUID, document: String): BlockRevisionAppendResult {
         val session = sessionRepository.findByIdForUpdate(sessionId)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
-        validateBlockProgram(document)
+        val program = validateBlockProgram(document)
+        missionBlockGuard.ensureAllowed(session, program)
         val version = session.advanceBlockVersion()
         val revision = BlockRevision.create(
             sessionId = session.id,
@@ -62,7 +67,7 @@ class SessionService(
         )
     }
 
-    private fun validateBlockProgram(document: String) {
+    private fun validateBlockProgram(document: String): BlockProgram {
         val program = try {
             blockProgramParser.parse(document)
         } catch (exception: BlockProgramParseException) {
@@ -71,7 +76,8 @@ class SessionService(
                 fieldErrors = listOf(FieldErrorItem(field = "document", reason = exception.code.name)),
             )
         }
-        val result = blockProgramValidator.validate(program)
+        val structure = blockProgramValidator.validate(program)
+        val result = if (structure.isValid) blockProgramLimitValidator.validate(program) else structure
         if (!result.isValid) {
             throw ApplicationException(
                 errorCode = ErrorCode.BLOCK_PROGRAM_INVALID,
@@ -83,6 +89,7 @@ class SessionService(
                 },
             )
         }
+        return program
     }
 }
 

@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.execution.application
 
+import java.lang.reflect.Proxy
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
@@ -12,6 +13,7 @@ import team.inreok.poppyserver.domain.block.application.BlockProgramValidator
 import team.inreok.poppyserver.domain.command.application.BlockProgramCompiler
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.robot.application.RequiredCapabilitiesResolver
+import team.inreok.poppyserver.domain.robot.application.RobotRepository
 import team.inreok.poppyserver.domain.session.model.BlockRevision
 import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.domain.session.model.SimulationPass
@@ -56,6 +58,7 @@ class ExecutionRequestServiceTest {
                 override fun save(pass: SimulationPass): SimulationPass = pass
                 override fun findById(sessionId: UUID, blockVersion: Long): SimulationPass =
                     SimulationPass.create(sessionId, blockVersion)
+                override fun deleteAllBySessionId(sessionId: UUID) = Unit
             },
             executionRepository = executionRepository,
             executionStatusEventPublisher = object : ExecutionStatusEventPublisher {
@@ -64,6 +67,10 @@ class ExecutionRequestServiceTest {
             blockProgramParser = BlockProgramParser(JsonMapper.builder().build()),
             blockProgramCompiler = BlockProgramCompiler(BlockProgramValidator()),
             requiredCapabilitiesResolver = RequiredCapabilitiesResolver(),
+            robotRepository = Proxy.newProxyInstance(
+                RobotRepository::class.java.classLoader,
+                arrayOf(RobotRepository::class.java),
+            ) { _, method, _ -> throw UnsupportedOperationException(method.name) } as RobotRepository,
             objectMapper = JsonMapper.builder().build(),
         )
 

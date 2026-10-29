@@ -4,7 +4,9 @@ import java.util.UUID
 import org.springframework.stereotype.Component
 import team.inreok.poppyserver.domain.block.model.BlockType
 import team.inreok.poppyserver.domain.mission.model.CompletionCondition
+import team.inreok.poppyserver.domain.mission.model.MinimumExecutions
 import team.inreok.poppyserver.domain.mission.model.Mission
+import team.inreok.poppyserver.domain.mission.model.MissionCompletionRule
 import team.inreok.poppyserver.domain.mission.model.MissionDifficulty
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
@@ -17,6 +19,9 @@ class MissionCatalog {
         MISSIONS.find { it.id == missionId } ?: throw ApplicationException(ErrorCode.MISSION_NOT_FOUND)
 
     companion object {
+        private val TURNS = setOf(BlockType.TURN_LEFT, BlockType.TURN_RIGHT)
+        private val MOVES = setOf(BlockType.MOVE_FORWARD, BlockType.MOVE_BACKWARD)
+
         private val MISSIONS = listOf(
             Mission(
                 id = UUID.fromString("f3f450e4-8faf-4d2e-b2aa-6f76ac115412"),
@@ -35,6 +40,10 @@ class MissionCatalog {
                 timeLimitSeconds = null,
                 estimatedSeconds = null,
                 allowedBlocks = listOf(BlockType.MOVE_FORWARD, BlockType.STOP),
+                completionRule = MissionCompletionRule(
+                    requiredBlocks = listOf(setOf(BlockType.MOVE_FORWARD)),
+                    lastAction = BlockType.STOP,
+                ),
             ),
             Mission(
                 id = UUID.fromString("bb2062b6-6cd2-4d09-b677-7ebfaeaed381"),
@@ -53,6 +62,11 @@ class MissionCatalog {
                 timeLimitSeconds = null,
                 estimatedSeconds = null,
                 allowedBlocks = listOf(BlockType.TURN_LEFT, BlockType.TURN_RIGHT, BlockType.STOP),
+                completionRule = MissionCompletionRule(
+                    requiredBlocks = listOf(TURNS),
+                    forbiddenBlocks = MOVES,
+                    lastAction = BlockType.STOP,
+                ),
             ),
             Mission(
                 id = UUID.fromString("c7c16569-89e9-4289-9094-3503649180cc"),
@@ -77,6 +91,10 @@ class MissionCatalog {
                     BlockType.MOVE_FORWARD,
                     BlockType.STOP,
                 ),
+                completionRule = MissionCompletionRule(
+                    requiredOrder = listOf(setOf(BlockType.SIT), setOf(BlockType.STAND), setOf(BlockType.MOVE_FORWARD)),
+                    lastAction = BlockType.STOP,
+                ),
             ),
             Mission(
                 id = UUID.fromString("070cc084-7085-4d78-af20-fa8802feec0b"),
@@ -98,6 +116,37 @@ class MissionCatalog {
                     BlockType.TURN_LEFT,
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
+                ),
+                completionRule = MissionCompletionRule(
+                    requiredOrder = listOf(setOf(BlockType.MOVE_FORWARD), TURNS, setOf(BlockType.MOVE_FORWARD)),
+                ),
+            ),
+            Mission(
+                id = UUID.fromString("dc7e71a5-236c-4f6e-8ce0-5ad3e2fe2300"),
+                title = "무대 중앙에서 포즈",
+                difficulty = MissionDifficulty.NORMAL,
+                summary = "지정 위치까지 이동한 뒤 멈추고 안전한 프리셋 자세를 실행하는 미션.",
+                description = "지정 위치까지 이동한 뒤 멈추고 안전한 프리셋 자세를 실행하는 미션.",
+                goal = "이동 → 정지 → 포즈 순서를 정확하게 구성한다.",
+                completionCondition = CompletionCondition(
+                    description = listOf(
+                        "목표 지점에 먼저 도착한 뒤 프리셋 실행",
+                        "이동 중 프리셋 실행 금지",
+                        "허용된 프리셋만 사용",
+                    ).joinToString("\n"),
+                ),
+                timeLimitSeconds = null,
+                estimatedSeconds = null,
+                allowedBlocks = listOf(
+                    BlockType.MOVE_FORWARD,
+                    BlockType.TURN_LEFT,
+                    BlockType.TURN_RIGHT,
+                    BlockType.STOP,
+                    BlockType.WAIT,
+                    BlockType.PRESET,
+                ),
+                completionRule = MissionCompletionRule(
+                    requiredOrder = listOf(setOf(BlockType.MOVE_FORWARD), setOf(BlockType.STOP), setOf(BlockType.PRESET)),
                 ),
             ),
             Mission(
@@ -121,6 +170,9 @@ class MissionCatalog {
                     BlockType.TURN_LEFT,
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
+                ),
+                completionRule = MissionCompletionRule(
+                    requiredOrder = listOf(setOf(BlockType.MOVE_FORWARD), TURNS, setOf(BlockType.MOVE_FORWARD)),
                 ),
             ),
             Mission(
@@ -147,6 +199,13 @@ class MissionCatalog {
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
                 ),
+                completionRule = MissionCompletionRule(
+                    requiredBlocks = listOf(setOf(BlockType.REPEAT)),
+                    minimumExecutions = listOf(
+                        MinimumExecutions(setOf(BlockType.MOVE_FORWARD), 4),
+                        MinimumExecutions(TURNS, 4),
+                    ),
+                ),
             ),
             Mission(
                 id = UUID.fromString("5fc3d1c9-b2d5-4fff-8689-ad44a32b9639"),
@@ -169,6 +228,9 @@ class MissionCatalog {
                     BlockType.TURN_LEFT,
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
+                ),
+                completionRule = MissionCompletionRule(
+                    requiredBlocks = listOf(setOf(BlockType.TURN_LEFT), setOf(BlockType.TURN_RIGHT)),
                 ),
             ),
             Mission(
@@ -195,6 +257,7 @@ class MissionCatalog {
                     BlockType.TURN_RIGHT,
                     BlockType.STOP,
                 ),
+                completionRule = MissionCompletionRule(maxBlockCount = 4),
             ),
         )
     }

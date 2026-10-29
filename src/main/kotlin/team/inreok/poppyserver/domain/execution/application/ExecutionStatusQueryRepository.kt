@@ -22,4 +22,5 @@ data class ExecutionStatusView(
     val queuedAt: Instant?,
     val startedAt: Instant?,
     val finishedAt: Instant?,
+    val missionId: UUID? = null,
 )

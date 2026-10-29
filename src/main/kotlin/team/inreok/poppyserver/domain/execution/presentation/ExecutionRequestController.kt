@@ -4,6 +4,7 @@ import java.time.Instant
 import java.util.UUID
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -33,13 +34,18 @@ class ExecutionRequestController(
         @Valid @RequestBody request: ExecutionRequest,
     ): ResponseEntity<ApiResponse<ExecutionResponse>> {
         sessionAccessVerifier.verify(sessionId, sessionToken)
-        val result = executionRequestService.requestExecution(sessionId, requireNotNull(request.blockVersion))
+        val result = executionRequestService.requestExecution(
+            sessionId,
+            requireNotNull(request.blockVersion),
+            request.robotAlias,
+        )
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(result.toResponse()))
     }
 }
 
 data class ExecutionRequest(
     @field:NotNull val blockVersion: Long?,
+    @field:Pattern(regexp = ".*\\S.*") val robotAlias: String? = null,
 )
 
 data class ExecutionResponse(

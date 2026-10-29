@@ -243,6 +243,65 @@ class QueueDispatchIntegrationTest : PostgresIntegrationTest() {
         assertEquals(2, executions.mapNotNull { executionRepository.findById(it.id)?.assignedRobotId }.toSet().size)
     }
 
+    @Test
+    fun `지정 Robot 실행은 다른 READY Robot이 있어도 지정 Robot에만 배정한다`() {
+        val (first, requested) = inTransaction { robotRepository.save(availableRobot()) to robotRepository.save(availableRobot()) }
+        val execution = inTransaction { saveRequested(requested.id, "2026-01-08T00:00:00Z") }
+
+        assertEquals(1, queueDispatchService.dispatchAvailable())
+
+        assertEquals(requested.id, executionRepository.findById(execution.id)?.assignedRobotId)
+        assertEquals(false, robotRepository.findById(first.id)?.occupied)
+    }
+
+    @Test
+    fun `지정 Robot이 사용 중이면 그 실행은 기다리고 뒤의 미지정 실행은 다른 Robot에 배정한다`() {
+        val busy = inTransaction { robotRepository.save(robot(currentExecutionId = UUID.randomUUID())) }
+        val free = inTransaction { robotRepository.save(availableRobot()) }
+        val requested = inTransaction { saveRequested(busy.id, "2026-01-09T00:00:01Z") }
+        val unrequested = inTransaction { saveQueued("2026-01-09T00:00:02Z") }
+
+        assertEquals(1, queueDispatchService.dispatchAvailable())
+
+        assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(requested.id)?.status)
+        assertEquals(free.id, executionRepository.findById(unrequested.id)?.assignedRobotId)
+    }
+
+    @Test
+    fun `지정 Robot이 OFFLINE이면 QUEUED로 남고 READY가 되면 배정한다`() {
+        val robot = inTransaction { robotRepository.save(robot(connectionStatus = RobotConnectionStatus.OFFLINE)) }
+        val execution = inTransaction { saveRequested(robot.id, "2026-01-10T00:00:00Z") }
+
+        assertEquals(0, queueDispatchService.dispatchAvailable())
+        assertEquals(ExecutionStatus.QUEUED, executionRepository.findById(execution.id)?.status)
+
+        inTransaction {
+            val stored = requireNotNull(robotRepository.findById(robot.id))
+            stored.applyHeartbeat(
+                at = Instant.parse("2026-01-10T00:00:05Z"),
+                connectionStatus = RobotConnectionStatus.ONLINE,
+                operationStatus = RobotOperationStatus.READY,
+                batteryPercent = 80,
+                currentExecutionId = null,
+            )
+            robotRepository.save(stored)
+        }
+
+        assertEquals(1, queueDispatchService.dispatchAvailable())
+        assertEquals(robot.id, executionRepository.findById(execution.id)?.assignedRobotId)
+    }
+
+    private fun saveRequested(robotId: UUID, queuedAt: String): Execution = executionRepository.save(
+        Execution.restore(
+            id = UUID.randomUUID(),
+            status = ExecutionStatus.QUEUED,
+            sessionId = fixtureSessionId,
+            blockVersion = 1L,
+            queuedAt = Instant.parse(queuedAt),
+            requestedRobotId = robotId,
+        ),
+    )
+
     private fun saveQueued(queuedAt: String): Execution = saveQueued(Instant.parse(queuedAt))
 
     private fun saveQueued(queuedAt: Instant): Execution = executionRepository.save(
