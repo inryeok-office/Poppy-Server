@@ -47,6 +47,18 @@ class Session private constructor(
         }
     }
 
+    fun changeExperience(newMode: ExperienceMode, newMissionId: UUID?): Boolean {
+        require((newMode == ExperienceMode.MISSION) == (newMissionId != null)) {
+            "missionId is required only for MISSION mode"
+        }
+        if (mode == newMode && missionId == newMissionId) {
+            return false
+        }
+        mode = newMode
+        missionId = newMissionId
+        return true
+    }
+
     fun expire(at: Instant) {
         if (expiredAt == null) {
             expiredAt = at

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.block.application.BlockProgramParseException
 import team.inreok.poppyserver.domain.block.application.BlockProgramParser
 import team.inreok.poppyserver.domain.block.application.BlockProgramValidator
+import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.session.model.BlockRevision
 import team.inreok.poppyserver.domain.session.model.Session
 import team.inreok.poppyserver.global.error.ApplicationException
@@ -23,6 +24,7 @@ class SessionService(
     private val recoveryCodeIssuer: RecoveryCodeIssuer,
     private val blockProgramParser: BlockProgramParser,
     private val blockProgramValidator: BlockProgramValidator,
+    private val missionBlockGuard: MissionBlockGuard,
 ) {
     @Transactional
     fun createSession(): SessionCreationResult {
@@ -46,7 +48,8 @@ class SessionService(
     fun appendBlockRevision(sessionId: UUID, document: String): BlockRevisionAppendResult {
         val session = sessionRepository.findByIdForUpdate(sessionId)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
-        validateBlockProgram(document)
+        val program = validateBlockProgram(document)
+        missionBlockGuard.ensureAllowed(session, program)
         val version = session.advanceBlockVersion()
         val revision = BlockRevision.create(
             sessionId = session.id,
@@ -62,7 +65,7 @@ class SessionService(
         )
     }
 
-    private fun validateBlockProgram(document: String) {
+    private fun validateBlockProgram(document: String): BlockProgram {
         val program = try {
             blockProgramParser.parse(document)
         } catch (exception: BlockProgramParseException) {
@@ -83,6 +86,7 @@ class SessionService(
                 },
             )
         }
+        return program
     }
 }
 
