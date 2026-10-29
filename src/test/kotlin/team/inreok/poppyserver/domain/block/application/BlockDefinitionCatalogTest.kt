@@ -30,9 +30,42 @@ class BlockDefinitionCatalogTest {
         definitions.filter { it.type.parameterName == null }.forEach { definition ->
             assertTrue(definition.parameters.isEmpty())
         }
-        assertTrue(byType.getValue(BlockType.PRESET).parameters.single().options.isEmpty())
-        assertTrue(definitions.all { definition -> definition.parameters.all { it.min == null && it.max == null } })
         assertTrue(definitions.none { definition -> definition.parameters.any { it.name.contains("velocity", ignoreCase = true) } })
+    }
+
+    @Test
+    fun `parameter ranges match the Agent and Client execution limits`() {
+        val byType = definitions.associateBy { it.type }
+
+        assertRange(byType.getValue(BlockType.WAIT), 1.0, 10.0)
+        assertRange(byType.getValue(BlockType.REPEAT), 1.0, 10.0)
+        assertRange(byType.getValue(BlockType.MOVE_FORWARD), 0.1, 3.0)
+        assertRange(byType.getValue(BlockType.MOVE_BACKWARD), 0.1, 3.0)
+        assertRange(byType.getValue(BlockType.TURN_LEFT), 1.0, 360.0)
+        assertRange(byType.getValue(BlockType.TURN_RIGHT), 1.0, 360.0)
+    }
+
+    @Test
+    fun `PRESET is available with the allow-listed codes and Korean labels`() {
+        val preset = definitions.single { it.type == BlockType.PRESET }
+        val parameter = preset.parameters.single()
+
+        assertTrue(preset.available)
+        assertEquals(listOf("HELLO", "HEART", "DANCE1", "STRETCH"), parameter.options)
+        assertEquals(
+            mapOf("HELLO" to "인사하기", "HEART" to "하트", "DANCE1" to "춤추기", "STRETCH" to "스트레칭"),
+            parameter.optionLabels,
+        )
+    }
+
+    private fun assertRange(
+        definition: team.inreok.poppyserver.domain.block.model.BlockDefinition,
+        min: Double,
+        max: Double,
+    ) {
+        val parameter = definition.parameters.single()
+        assertEquals(min, parameter.min)
+        assertEquals(max, parameter.max)
     }
 
     private fun assertParameter(

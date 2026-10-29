@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.block.application.BlockProgramParseException
 import team.inreok.poppyserver.domain.block.application.BlockProgramParser
+import team.inreok.poppyserver.domain.block.application.BlockProgramLimitValidator
 import team.inreok.poppyserver.domain.block.application.BlockProgramValidator
 import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.session.model.BlockRevision
@@ -25,6 +26,7 @@ class SessionService(
     private val blockProgramParser: BlockProgramParser,
     private val blockProgramValidator: BlockProgramValidator,
     private val missionBlockGuard: MissionBlockGuard,
+    private val blockProgramLimitValidator: BlockProgramLimitValidator,
 ) {
     @Transactional
     fun createSession(): SessionCreationResult {
@@ -74,7 +76,8 @@ class SessionService(
                 fieldErrors = listOf(FieldErrorItem(field = "document", reason = exception.code.name)),
             )
         }
-        val result = blockProgramValidator.validate(program)
+        val structure = blockProgramValidator.validate(program)
+        val result = if (structure.isValid) blockProgramLimitValidator.validate(program) else structure
         if (!result.isValid) {
             throw ApplicationException(
                 errorCode = ErrorCode.BLOCK_PROGRAM_INVALID,
