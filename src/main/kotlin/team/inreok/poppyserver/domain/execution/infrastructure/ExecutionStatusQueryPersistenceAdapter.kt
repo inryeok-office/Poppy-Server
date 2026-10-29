@@ -56,7 +56,8 @@ class ExecutionStatusQueryPersistenceAdapter(
             execution.assigned_robot_id,
             execution.queued_at,
             execution.started_at,
-            execution.finished_at
+            execution.finished_at,
+            execution.mission_id
         from executions execution
         left join queued_executions queued on queued.id = execution.id
         $whereClause
@@ -75,6 +76,7 @@ class ExecutionStatusQueryPersistenceAdapter(
         queuedAt = getNullableInstant("queued_at"),
         startedAt = getNullableInstant("started_at"),
         finishedAt = getNullableInstant("finished_at"),
+        missionId = getObject("mission_id", UUID::class.java),
     )
 
     private fun ResultSet.getNullableInt(column: String): Int? = getInt(column).let { value ->

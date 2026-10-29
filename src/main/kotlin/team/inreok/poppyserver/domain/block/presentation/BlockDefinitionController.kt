@@ -44,6 +44,7 @@ data class ParameterDefinitionResponse(
     val min: Double?,
     val max: Double?,
     val options: List<String>,
+    val optionLabels: Map<String, String>,
 )
 
 private fun BlockDefinition.toResponse(): BlockDefinitionResponse = BlockDefinitionResponse(
@@ -63,4 +64,5 @@ private fun ParameterDefinition.toResponse(): ParameterDefinitionResponse = Para
     min = min,
     max = max,
     options = options,
+    optionLabels = optionLabels,
 )

@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController
 import tools.jackson.databind.JsonNode
 import team.inreok.poppyserver.domain.session.application.BlockRevisionAppendResult
 import team.inreok.poppyserver.domain.session.application.SessionCreationResult
+import team.inreok.poppyserver.domain.session.application.SessionExperienceResult
+import team.inreok.poppyserver.domain.session.application.SessionExperienceService
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SessionAccessVerifier
 import team.inreok.poppyserver.domain.session.application.SessionRecoveryService
@@ -35,6 +38,7 @@ class SessionController(
     private val sessionAccessVerifier: SessionAccessVerifier,
     private val sessionRecoveryService: SessionRecoveryService,
     private val sessionQueryService: SessionQueryService,
+    private val sessionExperienceService: SessionExperienceService,
 ) {
     @PostMapping
     fun createSession(): ResponseEntity<ApiResponse<SessionResponse>> = ResponseEntity.status(HttpStatus.CREATED).body(
@@ -56,6 +60,17 @@ class SessionController(
     ): ResponseEntity<ApiResponse<SessionQueryResponse>> = ResponseEntity.ok(
         ApiResponse.success(sessionQueryService.getSession(sessionId, sessionToken).toResponse()),
     )
+
+    @PatchMapping("/{sessionId}")
+    fun changeExperience(
+        @PathVariable sessionId: UUID,
+        @RequestHeader(name = "X-Session-Token", required = false) sessionToken: String?,
+        @Valid @RequestBody request: SessionExperienceRequest,
+    ): ResponseEntity<ApiResponse<SessionExperienceResponse>> {
+        sessionAccessVerifier.verify(sessionId, sessionToken)
+        val result = sessionExperienceService.changeExperience(sessionId, requireNotNull(request.mode), request.missionId)
+        return ResponseEntity.ok(ApiResponse.success(result.toResponse()))
+    }
 
     @PostMapping("/{sessionId}/block-revisions")
     fun appendBlockRevision(
@@ -104,6 +119,18 @@ data class SessionQueryResponse(
     val expiresAt: Instant,
 )
 
+data class SessionExperienceRequest(
+    @field:NotNull val mode: ExperienceMode?,
+    val missionId: UUID?,
+)
+
+data class SessionExperienceResponse(
+    val sessionId: UUID,
+    val mode: ExperienceMode,
+    val missionId: UUID?,
+    val blockVersion: Long,
+)
+
 data class BlockRevisionResponse(
     val sessionId: UUID,
     val blockVersion: Long,
@@ -135,5 +162,12 @@ private fun SessionQueryResult.toResponse(): SessionQueryResponse = SessionQuery
 
 private fun BlockRevisionAppendResult.toResponse(): BlockRevisionResponse = BlockRevisionResponse(
     sessionId = sessionId,
+    blockVersion = blockVersion,
+)
+
+private fun SessionExperienceResult.toResponse(): SessionExperienceResponse = SessionExperienceResponse(
+    sessionId = sessionId,
+    mode = mode,
+    missionId = missionId,
     blockVersion = blockVersion,
 )

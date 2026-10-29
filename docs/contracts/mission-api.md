@@ -16,16 +16,17 @@
 | `summary` | string | Notion 원문의 "컨셉" |
 | `estimatedSeconds` | number \| null | 항상 `null` (예상 소요 시간 미확정) |
 
-목록 순서는 catalog에 정의된 순서이며, 아래 8개 미션을 이 순서로 포함한다.
+목록 순서는 catalog에 정의된 순서이며, 아래 9개 미션을 이 순서로 포함한다.
 
 1. 로봇 택배 배달 (EASY)
 2. 뒤를 봐! (EASY)
 3. 인사하고 출발! (EASY)
 4. 편의점 심부름 (NORMAL)
-5. 집으로 돌아가기 (NORMAL)
-6. 사각 순찰대 (HARD)
-7. 숫자 8 드라이브 (HARD)
-8. 최소 블록 챌린지 (HARD)
+5. 무대 중앙에서 포즈 (NORMAL)
+6. 집으로 돌아가기 (NORMAL)
+7. 사각 순찰대 (HARD)
+8. 숫자 8 드라이브 (HARD)
+9. 최소 블록 챌린지 (HARD)
 
 ## GET /api/v1/missions/{missionId}
 
@@ -48,13 +49,16 @@
 
 Notion 원문에는 미션별로 "컨셉" 텍스트 하나만 있고 목록용 요약과 상세용 설명이 분리되어 있지 않다. 필드를 지어내지 않기 위해 `summary`와 `description`에 같은 "컨셉" 텍스트를 그대로 사용한다.
 
-## PRESET 미션 제외
+## PRESET 미션
 
-Notion 원문 5번 미션("무대 중앙에서 포즈")은 `PRESET` 블록이 필요하지만, `BlockDefinitionCatalog`에서 `PRESET`은 `available: false`, `freeModeAllowed: false`로 표시되어 있다(실기기 whitelist 미확정). 이 미션은 이번 catalog에서 제외했으며, 이동/정지 조합으로 대체하지 않았다. PRESET이 실기기 검증을 거쳐 `available: true`가 되면 후속 Issue에서 추가한다.
+Notion 원문 5번 미션("무대 중앙에서 포즈")은 `PRESET` 블록이 필요해 처음에는 제외했다. PRESET 이 `available: true`
+(allow-list `HELLO`/`HEART`/`DANCE1`/`STRETCH`, Issue #117)가 되고 2026-10-28·29 실기 시험에서 `HEART` 등이 실행돼
+catalog 에 추가했다(Issue #119). allowedBlocks 는 `MOVE_FORWARD`, `TURN_LEFT`, `TURN_RIGHT`, `STOP`, `WAIT`, `PRESET`.
+"이동 중 프리셋 실행 금지" 같은 순서 조건은 실행 완료 후 블록 구성 기준 판정(`docs/contracts/mission-completion.md`)에서 "이동 → 정지 → 프리셋" 순서로 확인한다.
 
 ## 최소 블록 챌린지의 최대 블록 수
 
-9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다.
+9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다. 완료 판정 규칙의 `maxBlockCount`는 4로 정했다(2026-10-29 운영 결정, 교사 확인 필요 — `mission-completion.md` 참고).
 
 ## allowedBlocks와 BlockDefinitionCatalog의 관계
 

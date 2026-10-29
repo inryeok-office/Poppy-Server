@@ -33,6 +33,8 @@ class ExecutionEntity(
     var requiredCapabilities: List<String>? = null,
     @Column(name = "queued_at")
     var queuedAt: Instant? = null,
+    @Column(name = "mission_id")
+    var missionId: UUID? = null,
     @Column(name = "started_at")
     var startedAt: Instant? = null,
     @Column(name = "finished_at")

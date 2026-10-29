@@ -20,6 +20,7 @@ class ExecutionPersistenceAdapter(
                 existing.sessionId == execution.sessionId &&
                     existing.blockVersion == execution.blockVersion &&
                     existing.queuedAt == execution.queuedAt &&
+                    existing.missionId == execution.missionId &&
                     existing.compiledCommandPayload == execution.compiledCommandPayload &&
                     existing.requiredCapabilities == execution.requiredCapabilitiesForPersistence(),
             ) { "Execution provenance is immutable" }
@@ -53,6 +54,7 @@ class ExecutionPersistenceAdapter(
         compiledCommandPayload = execution.compiledCommandPayload
         requiredCapabilities = execution.requiredCapabilitiesForPersistence()
         queuedAt = execution.queuedAt
+        missionId = execution.missionId
         startedAt = execution.startedAt
         finishedAt = execution.finishedAt
     }
@@ -68,6 +70,7 @@ class ExecutionPersistenceAdapter(
         queuedAt = queuedAt,
         startedAt = startedAt,
         finishedAt = finishedAt,
+        missionId = missionId,
     )
 
     private fun Execution.requiredCapabilitiesForPersistence(): List<String>? =

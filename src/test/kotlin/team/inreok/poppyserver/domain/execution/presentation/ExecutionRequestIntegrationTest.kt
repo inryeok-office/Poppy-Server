@@ -23,8 +23,10 @@ import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SessionCreationResult
+import team.inreok.poppyserver.domain.session.application.SessionExperienceService
 import team.inreok.poppyserver.domain.session.application.SessionService
 import team.inreok.poppyserver.domain.session.application.SimulationPassService
+import team.inreok.poppyserver.domain.session.model.ExperienceMode
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 import team.inreok.poppyserver.infrastructure.PostgresIntegrationTest
@@ -56,6 +58,9 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
 
     @Autowired
     lateinit var simulationPassService: SimulationPassService
+
+    @Autowired
+    lateinit var sessionExperienceService: SessionExperienceService
 
     @Autowired
     lateinit var transactionManager: PlatformTransactionManager
@@ -335,6 +340,28 @@ class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error.code").value("SESSION_NOT_FOUND"))
+    }
+
+    @Test
+    fun `MISSION 세션의 실행은 요청 시점 missionId를 저장한다`() {
+        val missionId = UUID.fromString("f3f450e4-8faf-4d2e-b2aa-6f76ac115412")
+        val session = sessionService.createSession()
+        sessionExperienceService.changeExperience(session.sessionId, ExperienceMode.MISSION, missionId)
+        sessionService.appendBlockRevision(session.sessionId, validBlockProgram())
+        simulationPassService.recordSimulationPass(session.sessionId, 1)
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+
+        assertEquals(missionId, executionRepository.findById(result.executionId)?.missionId)
+    }
+
+    @Test
+    fun `모드 미선택 세션의 실행은 missionId가 없다`() {
+        val session = preparedSession()
+
+        val result = executionRequestService.requestExecution(session.sessionId, 1)
+
+        assertNull(executionRepository.findById(result.executionId)?.missionId)
     }
 
     private fun preparedSession(): SessionCreationResult {

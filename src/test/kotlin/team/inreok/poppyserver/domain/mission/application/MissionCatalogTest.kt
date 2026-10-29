@@ -2,6 +2,9 @@ package team.inreok.poppyserver.domain.mission.application
 
 import org.junit.jupiter.api.Test
 import team.inreok.poppyserver.domain.block.application.BlockDefinitionCatalog
+import team.inreok.poppyserver.domain.block.model.BlockInstance
+import team.inreok.poppyserver.domain.block.model.BlockParameters
+import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.block.model.BlockType
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,13 +18,14 @@ class MissionCatalogTest {
         .toSet()
 
     @Test
-    fun `catalog는 5번을 제외한 8개 미션을 원본 순서대로 포함한다`() {
+    fun `catalog는 Notion 미션 9종을 원본 순서대로 포함한다`() {
         assertEquals(
             listOf(
                 "로봇 택배 배달",
                 "뒤를 봐!",
                 "인사하고 출발!",
                 "편의점 심부름",
+                "무대 중앙에서 포즈",
                 "집으로 돌아가기",
                 "사각 순찰대",
                 "숫자 8 드라이브",
@@ -29,6 +33,24 @@ class MissionCatalogTest {
             ),
             missions.map { it.title },
         )
+    }
+
+    @Test
+    fun `무대 중앙에서 포즈는 이동·회전·정지·대기·특수 동작을 허용한다`() {
+        val mission = missions.single { it.title == "무대 중앙에서 포즈" }
+
+        assertEquals(
+            listOf(
+                BlockType.MOVE_FORWARD,
+                BlockType.TURN_LEFT,
+                BlockType.TURN_RIGHT,
+                BlockType.STOP,
+                BlockType.WAIT,
+                BlockType.PRESET,
+            ),
+            mission.allowedBlocks,
+        )
+        assertEquals(team.inreok.poppyserver.domain.mission.model.MissionDifficulty.NORMAL, mission.difficulty)
     }
 
     @Test
@@ -66,4 +88,70 @@ class MissionCatalogTest {
             }
         }
     }
+
+    @Test
+    fun `완료 규칙이 요구하는 블록은 모두 allowedBlocks 안에 있다`() {
+        missions.forEach { mission ->
+            val rule = mission.completionRule
+            val referenced = rule.requiredBlocks.flatten() +
+                rule.requiredOrder.flatten() +
+                rule.minimumExecutions.flatMap { it.types } +
+                listOfNotNull(rule.lastAction)
+            assertTrue(
+                mission.allowedBlocks.containsAll(referenced),
+                "${mission.title} rule references blocks outside allowedBlocks",
+            )
+        }
+    }
+
+    @Test
+    fun `미션마다 allowedBlocks 만으로 완료 규칙을 통과하는 예시가 있다`() {
+        val examples = mapOf(
+            "로봇 택배 배달" to listOf(b(BlockType.MOVE_FORWARD), b(BlockType.STOP)),
+            "뒤를 봐!" to listOf(b(BlockType.TURN_LEFT), b(BlockType.STOP)),
+            "인사하고 출발!" to listOf(b(BlockType.SIT), b(BlockType.WAIT), b(BlockType.STAND), b(BlockType.MOVE_FORWARD), b(BlockType.STOP)),
+            "편의점 심부름" to listOf(b(BlockType.MOVE_FORWARD), b(BlockType.TURN_RIGHT), b(BlockType.MOVE_FORWARD), b(BlockType.STOP)),
+            "무대 중앙에서 포즈" to listOf(b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT), b(BlockType.MOVE_FORWARD), b(BlockType.STOP), b(BlockType.PRESET), b(BlockType.WAIT)),
+            "집으로 돌아가기" to listOf(b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT), b(BlockType.TURN_LEFT), b(BlockType.MOVE_FORWARD), b(BlockType.STOP)),
+            "사각 순찰대" to listOf(repeat(4, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_RIGHT)), b(BlockType.STOP)),
+            "숫자 8 드라이브" to listOf(repeat(4, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT)), repeat(4, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_RIGHT)), b(BlockType.STOP)),
+            "최소 블록 챌린지" to listOf(repeat(2, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT)), b(BlockType.STOP)),
+        )
+        assertEquals(missions.map { it.title }.toSet(), examples.keys)
+
+        missions.forEach { mission ->
+            val blocks = examples.getValue(mission.title)
+            val result = mission.completionRule.evaluate(BlockProgram(1, listOf(b(BlockType.START)) + blocks + b(BlockType.END)))
+            assertTrue(result.passed, "${mission.title}: ${result.reasons}")
+        }
+    }
+
+    @Test
+    fun `무대 중앙에서 포즈는 정지 전에 특수 동작을 하면 실패한다`() {
+        val mission = missions.single { it.title == "무대 중앙에서 포즈" }
+
+        val result = mission.completionRule.evaluate(
+            BlockProgram(1, listOf(b(BlockType.START), b(BlockType.MOVE_FORWARD), b(BlockType.PRESET), b(BlockType.STOP), b(BlockType.END))),
+        )
+
+        assertFalse(result.passed)
+    }
+
+    @Test
+    fun `최소 블록 챌린지는 START END 를 빼고 반복 블록을 1개로 세어 4개까지 통과한다`() {
+        val mission = missions.single { it.title == "최소 블록 챌린지" }
+        val four = listOf(repeat(4, b(BlockType.MOVE_FORWARD), b(BlockType.TURN_LEFT)), b(BlockType.STOP))
+        val five = four + b(BlockType.STOP)
+
+        assertEquals(4, mission.completionRule.maxBlockCount)
+        assertTrue(mission.completionRule.evaluate(BlockProgram(1, listOf(b(BlockType.START)) + four + b(BlockType.END))).passed)
+        val result = mission.completionRule.evaluate(BlockProgram(1, listOf(b(BlockType.START)) + five + b(BlockType.END)))
+        assertFalse(result.passed)
+        assertEquals("5 > 4", result.reasons.single().detail)
+    }
+
+    private fun b(type: BlockType): BlockInstance = BlockInstance(id = type.name, type = type, parameters = BlockParameters.None)
+
+    private fun repeat(count: Long, vararg children: BlockInstance): BlockInstance =
+        BlockInstance(id = "repeat", type = BlockType.REPEAT, parameters = BlockParameters.Count(count), children = children.toList())
 }
