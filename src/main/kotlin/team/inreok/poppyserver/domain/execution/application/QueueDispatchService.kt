@@ -11,18 +11,21 @@ class QueueDispatchService(
 ) {
     fun dispatchAvailable(): Int {
         var dispatchedCount = 0
-        while (true) {
-            val executionId = queuedExecutionQueryRepository.findNextQueuedExecutionId() ?: return dispatchedCount
-            try {
-                if (executionAllocationService.allocate(executionId) == null) {
-                    return dispatchedCount
-                }
-                dispatchedCount++
+        for (queued in queuedExecutionQueryRepository.findQueuedExecutions()) {
+            val allocated = try {
+                executionAllocationService.allocate(queued.executionId) != null
             } catch (exception: IllegalStateException) {
-                if (queuedExecutionQueryRepository.findNextQueuedExecutionId() == executionId) {
+                if (queuedExecutionQueryRepository.findQueuedExecutions().any { it.executionId == queued.executionId }) {
                     throw exception
                 }
+                continue
+            }
+            if (allocated) {
+                dispatchedCount++
+            } else if (queued.requestedRobotId == null) {
+                return dispatchedCount
             }
         }
+        return dispatchedCount
     }
 }

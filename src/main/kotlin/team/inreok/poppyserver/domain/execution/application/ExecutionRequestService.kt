@@ -12,6 +12,7 @@ import team.inreok.poppyserver.domain.command.application.HighLevelCommandProtoc
 import team.inreok.poppyserver.domain.execution.model.Execution
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 import team.inreok.poppyserver.domain.robot.application.RequiredCapabilitiesResolver
+import team.inreok.poppyserver.domain.robot.application.RobotRepository
 import team.inreok.poppyserver.domain.session.application.BlockRevisionRepository
 import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SimulationPassRepository
@@ -30,12 +31,13 @@ class ExecutionRequestService(
     private val blockProgramParser: BlockProgramParser,
     private val blockProgramCompiler: BlockProgramCompiler,
     private val requiredCapabilitiesResolver: RequiredCapabilitiesResolver,
+    private val robotRepository: RobotRepository,
     objectMapper: ObjectMapper,
 ) {
     private val commandProtocolSerializer = HighLevelCommandProtocolSerializer(objectMapper)
 
     @Transactional
-    fun requestExecution(sessionId: UUID, blockVersion: Long): ExecutionRequestResult {
+    fun requestExecution(sessionId: UUID, blockVersion: Long, robotAlias: String? = null): ExecutionRequestResult {
         val session = sessionRepository.findByIdForUpdate(sessionId)
             ?: throw ApplicationException(ErrorCode.SESSION_NOT_FOUND)
         if (blockVersion <= 0) {
@@ -53,6 +55,7 @@ class ExecutionRequestService(
             throw ApplicationException(ErrorCode.EXECUTION_SESSION_ACTIVE)
         }
 
+        val requestedRobotId = robotAlias?.let(::resolveRequestedRobotId)
         val compiledProgram = blockProgramCompiler.compile(blockProgramParser.parse(revision.document))
         val execution = executionRepository.save(
             Execution.create(
@@ -61,6 +64,7 @@ class ExecutionRequestService(
                 compiledCommandPayload = commandProtocolSerializer.serialize(compiledProgram),
                 requiredCapabilities = requiredCapabilitiesResolver.resolve(compiledProgram),
                 missionId = session.missionId.takeIf { session.mode == ExperienceMode.MISSION },
+                requestedRobotId = requestedRobotId,
             ),
         )
         executionStatusEventPublisher.publish(
@@ -78,6 +82,13 @@ class ExecutionRequestService(
             queuedAt = requireNotNull(execution.queuedAt),
         )
     }
+
+    private fun resolveRequestedRobotId(alias: String): UUID =
+        robotRepository.findAll(operationStatus = null, connectionStatus = null)
+            .filter { it.active && it.alias == alias.trim() }
+            .singleOrNull()
+            ?.id
+            ?: throw ApplicationException(ErrorCode.ROBOT_NOT_FOUND)
 }
 
 data class ExecutionRequestResult(

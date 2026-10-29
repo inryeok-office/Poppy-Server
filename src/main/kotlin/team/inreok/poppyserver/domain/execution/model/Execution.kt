@@ -14,6 +14,7 @@ class Execution private constructor(
     private val requiredCapabilitiesValue: Set<String>,
     val queuedAt: Instant?,
     val missionId: UUID?,
+    val requestedRobotId: UUID?,
     private var startedAtValue: Instant?,
     private var finishedAtValue: Instant?,
 ) {
@@ -120,6 +121,7 @@ class Execution private constructor(
             requiredCapabilitiesValue = emptySet(),
             queuedAt = null,
             missionId = null,
+            requestedRobotId = null,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -138,6 +140,7 @@ class Execution private constructor(
             requiredCapabilitiesValue = emptySet(),
             queuedAt = queuedAt,
             missionId = null,
+            requestedRobotId = null,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -149,6 +152,7 @@ class Execution private constructor(
             requiredCapabilities: Set<String>,
             queuedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
             missionId: UUID? = null,
+            requestedRobotId: UUID? = null,
         ): Execution = Execution(
             id = UUID.randomUUID(),
             statusValue = ExecutionStatus.QUEUED,
@@ -161,6 +165,7 @@ class Execution private constructor(
             requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
             missionId = missionId,
+            requestedRobotId = requestedRobotId,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -177,6 +182,7 @@ class Execution private constructor(
             startedAt: Instant? = null,
             finishedAt: Instant? = null,
             missionId: UUID? = null,
+            requestedRobotId: UUID? = null,
         ): Execution = Execution(
             id = id,
             statusValue = status,
@@ -187,6 +193,7 @@ class Execution private constructor(
             requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
             missionId = missionId,
+            requestedRobotId = requestedRobotId,
             startedAtValue = startedAt,
             finishedAtValue = finishedAt,
         )

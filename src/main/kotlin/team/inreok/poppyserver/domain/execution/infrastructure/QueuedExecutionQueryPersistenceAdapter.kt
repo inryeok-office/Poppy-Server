@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import team.inreok.poppyserver.domain.execution.application.QueuedExecutionQueryRepository
+import team.inreok.poppyserver.domain.execution.application.QueuedExecutionRef
 import team.inreok.poppyserver.domain.execution.model.ExecutionStatus
 
 @Repository
@@ -14,16 +15,15 @@ class QueuedExecutionQueryPersistenceAdapter(
     private val entityManager: EntityManager,
 ) : QueuedExecutionQueryRepository {
     @Transactional(readOnly = true)
-    override fun findNextQueuedExecutionId(): UUID? = entityManager
+    override fun findQueuedExecutions(): List<QueuedExecutionRef> = entityManager
         .createQuery(
-            "select execution.id from ExecutionEntity execution " +
+            "select execution.id, execution.requestedRobotId from ExecutionEntity execution " +
                 "where execution.status = :status " +
                 "and execution.queuedAt is not null " +
                 "order by execution.queuedAt asc, execution.id asc",
-            UUID::class.java,
+            Array<Any?>::class.java,
         )
         .setParameter("status", ExecutionStatus.QUEUED)
-        .setMaxResults(1)
         .resultList
-        .firstOrNull()
+        .map { row -> QueuedExecutionRef(executionId = row[0] as UUID, requestedRobotId = row[1] as UUID?) }
 }

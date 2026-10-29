@@ -46,12 +46,14 @@ class ExecutionAllocationService(
     }
 
     private fun findAllocatableRobot(execution: Execution): Robot? {
-        if (execution.compiledCommandPayload == null) {
+        val requestedRobotId = execution.requestedRobotId
+        if (execution.compiledCommandPayload == null && requestedRobotId == null) {
             return robotRepository.findAvailableForAllocation()
         }
 
-        return robotRepository
-            .findAvailableForAllocationCandidateIds()
+        val candidateIds = requestedRobotId?.let(::listOf)
+            ?: robotRepository.findAvailableForAllocationCandidateIds()
+        return candidateIds
             .asSequence()
             .mapNotNull { candidateId -> robotRepository.findByIdForStatusUpdate(candidateId) }
             .firstOrNull { candidate ->

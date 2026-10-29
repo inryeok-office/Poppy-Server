@@ -35,6 +35,8 @@ class ExecutionEntity(
     var queuedAt: Instant? = null,
     @Column(name = "mission_id")
     var missionId: UUID? = null,
+    @Column(name = "requested_robot_id")
+    var requestedRobotId: UUID? = null,
     @Column(name = "started_at")
     var startedAt: Instant? = null,
     @Column(name = "finished_at")
