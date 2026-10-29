@@ -15,6 +15,7 @@ import team.inreok.poppyserver.domain.robot.application.RequiredCapabilitiesReso
 import team.inreok.poppyserver.domain.session.application.BlockRevisionRepository
 import team.inreok.poppyserver.domain.session.application.SessionRepository
 import team.inreok.poppyserver.domain.session.application.SimulationPassRepository
+import team.inreok.poppyserver.domain.session.model.ExperienceMode
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
 
@@ -59,6 +60,7 @@ class ExecutionRequestService(
                 blockVersion = blockVersion,
                 compiledCommandPayload = commandProtocolSerializer.serialize(compiledProgram),
                 requiredCapabilities = requiredCapabilitiesResolver.resolve(compiledProgram),
+                missionId = session.missionId.takeIf { session.mode == ExperienceMode.MISSION },
             ),
         )
         executionStatusEventPublisher.publish(

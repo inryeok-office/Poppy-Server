@@ -13,6 +13,7 @@ class Execution private constructor(
     val compiledCommandPayload: String?,
     private val requiredCapabilitiesValue: Set<String>,
     val queuedAt: Instant?,
+    val missionId: UUID?,
     private var startedAtValue: Instant?,
     private var finishedAtValue: Instant?,
 ) {
@@ -118,6 +119,7 @@ class Execution private constructor(
             compiledCommandPayload = null,
             requiredCapabilitiesValue = emptySet(),
             queuedAt = null,
+            missionId = null,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -135,6 +137,7 @@ class Execution private constructor(
             compiledCommandPayload = null,
             requiredCapabilitiesValue = emptySet(),
             queuedAt = queuedAt,
+            missionId = null,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -145,6 +148,7 @@ class Execution private constructor(
             compiledCommandPayload: String,
             requiredCapabilities: Set<String>,
             queuedAt: Instant = Instant.now().truncatedTo(ChronoUnit.MICROS),
+            missionId: UUID? = null,
         ): Execution = Execution(
             id = UUID.randomUUID(),
             statusValue = ExecutionStatus.QUEUED,
@@ -156,6 +160,7 @@ class Execution private constructor(
             },
             requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
+            missionId = missionId,
             startedAtValue = null,
             finishedAtValue = null,
         )
@@ -171,6 +176,7 @@ class Execution private constructor(
             queuedAt: Instant? = null,
             startedAt: Instant? = null,
             finishedAt: Instant? = null,
+            missionId: UUID? = null,
         ): Execution = Execution(
             id = id,
             statusValue = status,
@@ -180,6 +186,7 @@ class Execution private constructor(
             compiledCommandPayload = compiledCommandPayload,
             requiredCapabilitiesValue = requiredCapabilities.toSet(),
             queuedAt = queuedAt,
+            missionId = missionId,
             startedAtValue = startedAt,
             finishedAtValue = finishedAt,
         )

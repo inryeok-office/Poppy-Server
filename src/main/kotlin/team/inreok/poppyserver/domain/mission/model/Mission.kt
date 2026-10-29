@@ -14,4 +14,5 @@ data class Mission(
     val timeLimitSeconds: Long?,
     val estimatedSeconds: Long?,
     val allowedBlocks: List<BlockType>,
+    val completionRule: MissionCompletionRule,
 )

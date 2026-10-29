@@ -194,6 +194,72 @@ class ExecutionStatusIntegrationTest : PostgresIntegrationTest() {
             .andExpect(jsonPath("$.error.code").value("EXECUTION_ACCESS_DENIED"))
     }
 
+    @Test
+    fun `완료된 미션 실행은 블록 구성 기준 missionResult를 포함한다`() {
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(session.sessionId, DELIVERY_PROGRAM)
+        val execution = saveExecution(completed(missionExecution(session.sessionId)))
+
+        mockMvc.perform(
+            get("/api/v1/executions/${execution.id}")
+                .header("X-Session-Token", session.sessionToken),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.missionResult.missionId").value(DELIVERY_MISSION_ID.toString()))
+            .andExpect(jsonPath("$.data.missionResult.passed").value(true))
+            .andExpect(jsonPath("$.data.missionResult.reasons").isEmpty)
+    }
+
+    @Test
+    fun `완료 조건을 못 채운 미션 실행은 실패 사유를 반환한다`() {
+        val session = sessionWithRevision()
+        val execution = saveExecution(completed(missionExecution(session.sessionId)))
+
+        mockMvc.perform(
+            get("/api/v1/executions/${execution.id}")
+                .header("X-Session-Token", session.sessionToken),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.missionResult.passed").value(false))
+            .andExpect(jsonPath("$.data.missionResult.reasons[0].code").value("MISSING_REQUIRED_BLOCK"))
+            .andExpect(jsonPath("$.data.missionResult.reasons[0].detail").value("MOVE_FORWARD"))
+    }
+
+    @Test
+    fun `완료 전이거나 미션이 없는 실행은 missionResult가 null이다`() {
+        val session = sessionService.createSession()
+        sessionService.appendBlockRevision(session.sessionId, DELIVERY_PROGRAM)
+        val running = missionExecution(session.sessionId).apply {
+            assignToRobot(UUID.randomUUID())
+            start()
+        }
+        val freeSession = sessionWithRevision()
+        val free = completed(Execution.create(freeSession.sessionId, 1))
+        saveExecution(running)
+        saveExecution(free)
+
+        mockMvc.perform(get("/api/v1/executions/${running.id}").header("X-Session-Token", session.sessionToken))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.missionResult").value(null))
+        mockMvc.perform(get("/api/v1/executions/${free.id}").header("X-Session-Token", freeSession.sessionToken))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.data.missionResult").value(null))
+    }
+
+    private fun missionExecution(sessionId: UUID): Execution = Execution.create(
+        sessionId = sessionId,
+        blockVersion = 1,
+        compiledCommandPayload = "{}",
+        requiredCapabilities = emptySet(),
+        missionId = DELIVERY_MISSION_ID,
+    )
+
+    private fun completed(execution: Execution): Execution = execution.apply {
+        assignToRobot(UUID.randomUUID())
+        start()
+        complete()
+    }
+
     private fun saveExecution(execution: Execution): Execution = requireNotNull(
         TransactionTemplate(transactionManager).execute { executionRepository.save(execution) },
     )
@@ -202,6 +268,11 @@ class ExecutionStatusIntegrationTest : PostgresIntegrationTest() {
         sessionService.appendBlockRevision(it.sessionId, validBlockProgram())
     }
 }
+
+private val DELIVERY_MISSION_ID: UUID = UUID.fromString("f3f450e4-8faf-4d2e-b2aa-6f76ac115412")
+
+private const val DELIVERY_PROGRAM =
+    """{"schemaVersion":1,"blocks":[{"id":"start","type":"START","parameters":{}},{"id":"move","type":"MOVE_FORWARD","parameters":{"distanceMeters":0.5}},{"id":"stop","type":"STOP","parameters":{}},{"id":"end","type":"END","parameters":{}}]}"""
 
 private fun ExecutionStatus.isTerminal(): Boolean = this == ExecutionStatus.COMPLETED ||
     this == ExecutionStatus.FAILED ||

@@ -54,11 +54,11 @@ Notion 원문에는 미션별로 "컨셉" 텍스트 하나만 있고 목록용 �
 Notion 원문 5번 미션("무대 중앙에서 포즈")은 `PRESET` 블록이 필요해 처음에는 제외했다. PRESET 이 `available: true`
 (allow-list `HELLO`/`HEART`/`DANCE1`/`STRETCH`, Issue #117)가 되고 2026-10-28·29 실기 시험에서 `HEART` 등이 실행돼
 catalog 에 추가했다(Issue #119). allowedBlocks 는 `MOVE_FORWARD`, `TURN_LEFT`, `TURN_RIGHT`, `STOP`, `WAIT`, `PRESET`.
-"이동 중 프리셋 실행 금지" 같은 순서 조건은 `completionCondition.description` 텍스트로만 둔다.
+"이동 중 프리셋 실행 금지" 같은 순서 조건은 실행 완료 후 블록 구성 기준 판정(`docs/contracts/mission-completion.md`)에서 "이동 → 정지 → 프리셋" 순서로 확인한다.
 
 ## 최소 블록 챌린지의 최대 블록 수
 
-9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다.
+9번 미션("최소 블록 챌린지")은 Notion 원문에 "최대 블록 수 이하"라는 완료 조건만 있고 구체적인 숫자가 없다. 별도 필드를 만들지 않고 `completionCondition.description` 텍스트에만 이 조건을 남겨둔다. 완료 판정 규칙의 `maxBlockCount`도 숫자가 정해질 때까지 비워 둔다.
 
 ## allowedBlocks와 BlockDefinitionCatalog의 관계
 
