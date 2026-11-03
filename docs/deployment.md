@@ -107,9 +107,11 @@ CD 는 운영 compose 구성에서만 배포한다.
 
 - 사전 검사: `/etc/poppy-server/compose.yaml`·`/etc/poppy-server/poppy-server.env` 가 있어야 하고, env 파일의 필수 키
   7개(`SPRING_PROFILES_ACTIVE`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, `POPPY_AGENT_TOKEN`, `POPPY_ADMIN_USERNAME`,
-  `POPPY_ADMIN_PASSWORD_HASH`)가 값과 함께 있어야 한다(개수만 출력). compose.yaml 은 app 이미지를
+  `POPPY_ADMIN_PASSWORD_HASH`)가 각각 정확히 한 번 정의되고 Compose 보간 후 비어 있지 않아야 한다(값은 출력하지 않는다).
+  빈 값·공백만 있는 값·주석만 있는 값과 중복 키는 거부한다. `$`가 포함된 리터럴 해시는 단일 따옴표로 감싼다.
+  compose.yaml 은 app 이미지를
   `POPPY_SERVER_IMAGE_TAG` 로 골라야 한다(예: `image: poppy-server:${POPPY_SERVER_IMAGE_TAG}`). 하나라도 아니면
-  아무것도 바꾸지 않고 실패한다.
+  이미지 빌드와 컨테이너 교체 전에 실패한다. 사전 검사 전에 checkout 동기화는 수행된다.
 - 배포: `~/Poppy-Server` checkout 에서 `poppy-server:<짧은 sha>` 이미지를 빌드한 뒤
   `docker compose -p poppy-server --project-directory /etc/poppy-server -f /etc/poppy-server/compose.yaml --env-file /etc/poppy-server/poppy-server.env up -d --no-build app`.
   `--env-file` 이 빠지면 빈 값으로 기동되므로(2026-10-28 사고) 이 구성 밖의 `docker compose up` 은 쓰지 않는다.

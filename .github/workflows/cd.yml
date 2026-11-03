@@ -76,26 +76,24 @@ jobs:
             COMPOSE_DIR=/etc/poppy-server
             COMPOSE_FILE="$COMPOSE_DIR/compose.yaml"
             ENV_FILE="$COMPOSE_DIR/poppy-server.env"
-            REQUIRED_KEYS='SPRING_PROFILES_ACTIVE|DB_NAME|DB_USERNAME|DB_PASSWORD|POPPY_AGENT_TOKEN|POPPY_ADMIN_USERNAME|POPPY_ADMIN_PASSWORD_HASH'
-            REQUIRED_KEY_COUNT=7
 
             echo "=== Checking production compose files ==="
             sudo test -f "$COMPOSE_FILE" || { echo "ERROR: $COMPOSE_FILE not found. Aborting deployment."; exit 1; }
             sudo test -f "$ENV_FILE" || { echo "ERROR: $ENV_FILE not found. Aborting deployment."; exit 1; }
 
-            echo "=== Checking required env keys (count only) ==="
-            present=$(sudo grep -cE "^($REQUIRED_KEYS)=.+" "$ENV_FILE" || true)
-            echo "required keys with a value: $present/$REQUIRED_KEY_COUNT"
-            if [ "$present" != "$REQUIRED_KEY_COUNT" ]; then
-              echo "ERROR: required env keys are missing or empty. Aborting deployment."
-              exit 1
-            fi
+            echo "=== Checking required env keys ==="
+            sudo python3 "$HOME/Poppy-Server/scripts/check-cd-env.py" "$ENV_FILE"
 
-            echo "=== Checking image tag variable in compose.yaml ==="
-            if ! sudo grep -q 'POPPY_SERVER_IMAGE_TAG' "$COMPOSE_FILE"; then
-              echo "ERROR: $COMPOSE_FILE does not select the app image by POPPY_SERVER_IMAGE_TAG. Deploy manually."
-              exit 1
-            fi
+            echo "=== Checking production app image ==="
+            for tag in precheck-a precheck-b; do
+              image=$(sudo env POPPY_SERVER_IMAGE_TAG="$tag" docker compose -p poppy-server \
+                --project-directory "$COMPOSE_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
+                config --images app 2>/dev/null) || { echo "ERROR: cannot resolve production app image. Aborting deployment."; exit 1; }
+              if [ "$image" != "poppy-server:$tag" ]; then
+                echo "ERROR: production app image does not use the expected tag. Deploy manually."
+                exit 1
+              fi
+            done
 
             echo "=== Disk space check ==="
             df -h / | tail -1
