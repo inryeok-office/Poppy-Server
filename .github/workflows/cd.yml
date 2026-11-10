@@ -3,11 +3,13 @@ name: CD
 on:
   push:
     branches: [develop]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: production
 
     steps:
       - name: Checkout
@@ -71,22 +73,34 @@ jobs:
           script: |
             set -e
 
-            cd ~/Poppy-Server
+            COMPOSE_DIR=/etc/poppy-server
+            COMPOSE_FILE="$COMPOSE_DIR/compose.yaml"
+            ENV_FILE="$COMPOSE_DIR/poppy-server.env"
 
-            echo "=== Checking .env file ==="
-            if [ ! -f .env ]; then
-              echo "ERROR: .env file not found. Aborting deployment."
-              exit 1
-            fi
+            echo "=== Checking production compose files ==="
+            sudo test -f "$COMPOSE_FILE" || { echo "ERROR: $COMPOSE_FILE not found. Aborting deployment."; exit 1; }
+            sudo test -f "$ENV_FILE" || { echo "ERROR: $ENV_FILE not found. Aborting deployment."; exit 1; }
+
+            echo "=== Checking required env keys ==="
+            sudo python3 "$HOME/Poppy-Server/scripts/check-cd-env.py" "$ENV_FILE"
+
+            echo "=== Checking production app image ==="
+            for tag in precheck-a precheck-b; do
+              image=$(sudo env POPPY_SERVER_IMAGE_TAG="$tag" docker compose -p poppy-server \
+                --project-directory "$COMPOSE_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
+                config --images app 2>/dev/null) || { echo "ERROR: cannot resolve production app image. Aborting deployment."; exit 1; }
+              if [ "$image" != "poppy-server:$tag" ]; then
+                echo "ERROR: production app image does not use the expected tag. Deploy manually."
+                exit 1
+              fi
+            done
 
             echo "=== Disk space check ==="
             df -h / | tail -1
 
-            echo "=== Cleaning up unused images ==="
-            sudo docker image prune -f
-
-            echo "=== Validating Docker Compose configuration ==="
-            sudo docker compose config --quiet
+            echo "=== Validating production Docker Compose configuration ==="
+            sudo env POPPY_SERVER_IMAGE_TAG=precheck docker compose -p poppy-server \
+              --project-directory "$COMPOSE_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" config --quiet
 
       - name: Notify Discord before application replacement
         if: ${{ success() }}
@@ -123,8 +137,23 @@ jobs:
 
             cd ~/Poppy-Server
 
-            echo "=== Building and deploying ==="
-            sudo docker compose up -d --build
+            COMPOSE_DIR=/etc/poppy-server
+            TAG="$(git rev-parse --short=7 HEAD)"
+            compose() {
+              sudo env POPPY_SERVER_IMAGE_TAG="$TAG" docker compose -p poppy-server \
+                --project-directory "$COMPOSE_DIR" -f "$COMPOSE_DIR/compose.yaml" \
+                --env-file "$COMPOSE_DIR/poppy-server.env" "$@"
+            }
+
+            echo "=== Current app image (rollback target) ==="
+            compose images app || true
+
+            echo "=== Building poppy-server:$TAG ==="
+            sudo docker build -t "poppy-server:$TAG" .
+
+            echo "=== Deploying poppy-server:$TAG with the production compose project ==="
+            compose config --quiet
+            compose up -d --no-build app
 
       - name: Check application health
         id: health

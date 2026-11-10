@@ -33,8 +33,11 @@ class BlockDefinitionControllerTest {
             .andExpect(jsonPath("$.data.blocks[1].parameters[0].name").value("durationSeconds"))
             .andExpect(jsonPath("$.data.blocks[1].parameters[0].type").value("NUMBER"))
             .andExpect(jsonPath("$.data.blocks[11].type").value("PRESET"))
-            .andExpect(jsonPath("$.data.blocks[11].available").value(false))
-            .andExpect(jsonPath("$.data.blocks[11].parameters[0].options.length()").value(0))
+            .andExpect(jsonPath("$.data.blocks[11].available").value(true))
+            .andExpect(jsonPath("$.data.blocks[11].parameters[0].options.length()").value(4))
+            .andExpect(jsonPath("$.data.blocks[11].parameters[0].optionLabels.HELLO").value("인사하기"))
+            .andExpect(jsonPath("$.data.blocks[1].parameters[0].min").value(1.0))
+            .andExpect(jsonPath("$.data.blocks[1].parameters[0].max").value(10.0))
             .andExpect(jsonPath("$.error").value(null))
     }
 }
