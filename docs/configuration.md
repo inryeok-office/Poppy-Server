@@ -19,6 +19,9 @@
 | `DB_NAME` | 데이터베이스 이름 | `poppy` |
 | `DB_USERNAME` | 데이터베이스 사용자 | `poppy` |
 | `DB_PASSWORD` | 데이터베이스 비밀번호 | `poppy` |
+| `POPPY_AI_INFERENCE_URL` | 로컬 AI 추론 서비스 주소(예: `http://127.0.0.1:8090`). 비어 있으면 AI API 가 503 | 비어 있음 |
+| `POPPY_AI_INFERENCE_CONNECT_TIMEOUT` | AI 추론 서비스 연결 타임아웃 | `PT1S` |
+| `POPPY_AI_INFERENCE_TIMEOUT` | AI 추론 요청 전체 타임아웃 | `PT4S` |
 | `POPPY_AGENT_TOKEN` | 내부 Robot Agent API 인증 토큰 | 설정 필요 |
 | `POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS` | Robot heartbeat timeout(초) | `90` |
 | `POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS` | stale Robot 검사 주기(밀리초) | `30000` |

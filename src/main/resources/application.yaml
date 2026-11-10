@@ -15,6 +15,10 @@ server:
         secure: ${SESSION_COOKIE_SECURE:true}
         same-site: ${SESSION_COOKIE_SAME_SITE:strict}
 poppy:
+  ai:
+    inference-url: ${POPPY_AI_INFERENCE_URL:}
+    connect-timeout: ${POPPY_AI_INFERENCE_CONNECT_TIMEOUT:PT1S}
+    request-timeout: ${POPPY_AI_INFERENCE_TIMEOUT:PT4S}
   agent:
     heartbeat-timeout-seconds: ${POPPY_AGENT_HEARTBEAT_TIMEOUT_SECONDS:90}
     heartbeat-scan-interval-milliseconds: ${POPPY_AGENT_HEARTBEAT_SCAN_INTERVAL_MILLISECONDS:30000}
