@@ -49,5 +49,8 @@ enum class ErrorCode(
     ADMIN_LOGIN_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "ADMIN_LOGIN_RATE_LIMITED", "Too many admin login attempts"),
     ADMIN_LOGIN_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ADMIN_LOGIN_FAILED", "The admin login could not be processed"),
     ADMIN_SESSION_INVALID(HttpStatus.UNAUTHORIZED, "ADMIN_SESSION_INVALID", "The admin session is invalid"),
+    AI_INPUT_INVALID(HttpStatus.BAD_REQUEST, "AI_INPUT_INVALID", "AI 요청 입력이 올바르지 않습니다"),
+    AI_INPUT_REJECTED(HttpStatus.BAD_REQUEST, "AI_INPUT_REJECTED", "AI 요청 입력을 처리할 수 없습니다"),
+    AI_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI_UNAVAILABLE", "AI 도우미를 지금 사용할 수 없습니다"),
     ADMIN_LOGOUT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ADMIN_LOGOUT_FAILED", "The admin logout could not be processed"),
 }
