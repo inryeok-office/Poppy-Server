@@ -39,6 +39,9 @@ jobs:
       - name: Systemd deployment static tests
         run: bash scripts/test-systemd-deployment.sh
 
+      - name: CD environment validation tests
+        run: python3 scripts/test-cd-env-check.py
+
       - name: Discord payload tests
         run: bash scripts/test-discord-notify.sh
 
