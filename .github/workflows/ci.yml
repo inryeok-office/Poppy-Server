@@ -48,6 +48,17 @@ jobs:
       - name: GitHub automation script tests
         run: node --test ".github/scripts/tests/*.test.js"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: AI tests
+        working-directory: ai
+        run: |
+          python3 -m pip install --quiet -r requirements-test.txt
+          python3 -m pytest -q
+
       - name: Test
         run: ./gradlew test --console=plain
 

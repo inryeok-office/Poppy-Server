@@ -1,0 +1,40 @@
+{"utterance": "네모를 그리면서 걸어 줘", "steps": [{"kind": "repeat", "count": 4, "body": [{"kind": "moveForward", "distanceM": 1}, {"kind": "rotateLeft", "degrees": 90}]}]}
+{"utterance": "앞으로 2미터 가서 오른쪽으로 돌고 인사해", "steps": [{"kind": "moveForward", "distanceM": 2}, {"kind": "rotateRight", "degrees": 90}, {"kind": "greet"}]}
+{"utterance": "춤 추고 하트 해 줘", "steps": [{"kind": "dance"}, {"kind": "heart"}]}
+{"utterance": "하트 세 번 해 줘", "steps": [{"kind": "repeat", "count": 3, "body": [{"kind": "heart"}]}]}
+{"utterance": "앞으로 1m 가고 왼쪽으로 돌아", "steps": [{"kind": "moveForward", "distanceM": 1}, {"kind": "rotateLeft", "degrees": 90}]}
+{"utterance": "왼쪽으로 돌아서 2m 걸어가 줘", "steps": [{"kind": "rotateLeft", "degrees": 90}, {"kind": "moveForward", "distanceM": 2}]}
+{"utterance": "인사하고 춤춰", "steps": [{"kind": "greet"}, {"kind": "dance"}]}
+{"utterance": "3초 기다렸다가 앞으로 1미터 가", "steps": [{"kind": "wait", "seconds": 3}, {"kind": "moveForward", "distanceM": 1}]}
+{"utterance": "앞으로 50cm 가고 하트", "steps": [{"kind": "moveForward", "distanceM": 0.5}, {"kind": "heart"}]}
+{"utterance": "오른쪽으로 45도 돌아", "steps": [{"kind": "rotateRight", "degrees": 45}]}
+{"utterance": "제자리에서 한 바퀴 빙글 돌아", "steps": [{"kind": "rotateRight", "degrees": 360}]}
+{"utterance": "왼쪽으로 반 바퀴 돌고 인사해", "steps": [{"kind": "rotateLeft", "degrees": 180}, {"kind": "greet"}]}
+{"utterance": "앞으로 1m 가고 뒤로 1m 와", "steps": [{"kind": "moveForward", "distanceM": 1}, {"kind": "move", "distanceM": 1}]}
+{"utterance": "세모 모양으로 걸어 줘", "steps": [{"kind": "repeat", "count": 3, "body": [{"kind": "moveForward", "distanceM": 1}, {"kind": "rotateLeft", "degrees": 120}]}]}
+{"utterance": "한 변이 50cm인 네모를 그려", "steps": [{"kind": "repeat", "count": 4, "body": [{"kind": "moveForward", "distanceM": 0.5}, {"kind": "rotateLeft", "degrees": 90}]}]}
+{"utterance": "인사를 두 번 하고 춤을 춰", "steps": [{"kind": "repeat", "count": 2, "body": [{"kind": "greet"}]}, {"kind": "dance"}]}
+{"utterance": "앞으로 가다가 멈춰", "steps": [{"kind": "moveForward", "distanceM": 1}, {"kind": "stop"}]}
+{"utterance": "일어서서 인사해", "steps": [{"kind": "standUp"}, {"kind": "greet"}]}
+{"utterance": "5초 쉬고 춤춰", "steps": [{"kind": "wait", "seconds": 5}, {"kind": "dance"}]}
+{"utterance": "앞으로 1.5미터 이동해", "steps": [{"kind": "moveForward", "distanceM": 1.5}]}
+{"utterance": "왼쪽으로 30도 돌고 앞으로 2m 가고 하트 해", "steps": [{"kind": "rotateLeft", "degrees": 30}, {"kind": "moveForward", "distanceM": 2}, {"kind": "heart"}]}
+{"utterance": "1m 앞으로 가고 왼쪽으로 도는 걸 4번 반복해", "steps": [{"kind": "repeat", "count": 4, "body": [{"kind": "moveForward", "distanceM": 1}, {"kind": "rotateLeft", "degrees": 90}]}]}
+{"utterance": "춤을 세 번 춰 줘", "steps": [{"kind": "repeat", "count": 3, "body": [{"kind": "dance"}]}]}
+{"utterance": "좌회전 하고 직진 2미터", "steps": [{"kind": "rotateLeft", "degrees": 90}, {"kind": "moveForward", "distanceM": 2}]}
+{"utterance": "로봇아 안녕 인사해 줘", "steps": [{"kind": "greet"}]}
+{"utterance": "앞으로 두 걸음 정도 1미터 가 줘", "steps": [{"kind": "moveForward", "distanceM": 1}]}
+{"utterance": "왼쪽으로 90도 돌고 3미터 가고 오른쪽으로 90도 돌아", "steps": [{"kind": "rotateLeft", "degrees": 90}, {"kind": "moveForward", "distanceM": 3}, {"kind": "rotateRight", "degrees": 90}]}
+{"utterance": "2초 기다리고 하트 하고 2초 기다리고 인사", "steps": [{"kind": "wait", "seconds": 2}, {"kind": "heart"}, {"kind": "wait", "seconds": 2}, {"kind": "greet"}]}
+{"utterance": "앞으로 30센티 갔다가 뒤로 30센티 와", "steps": [{"kind": "moveForward", "distanceM": 0.3}, {"kind": "move", "distanceM": 0.3}]}
+{"utterance": "하트 하고 인사하는 걸 두 번 반복", "steps": [{"kind": "repeat", "count": 2, "body": [{"kind": "heart"}, {"kind": "greet"}]}]}
+{"utterance": "앞으로 이 미터 걸어가", "steps": [{"kind": "moveForward", "distanceM": 2}]}
+{"utterance": "오른쪽으로 180도 돌아", "steps": [{"kind": "rotateRight", "degrees": 180}]}
+{"utterance": "신나게 춤추고 마지막에 하트", "steps": [{"kind": "dance"}, {"kind": "heart"}]}
+{"utterance": "앞으로 0.5m씩 세 번 가", "steps": [{"kind": "repeat", "count": 3, "body": [{"kind": "moveForward", "distanceM": 0.5}]}]}
+{"utterance": "10초 동안 가만히 기다려", "steps": [{"kind": "wait", "seconds": 10}]}
+{"utterance": "왼쪽으로 60도 돌고 1m 직진하고 인사해 줘", "steps": [{"kind": "rotateLeft", "degrees": 60}, {"kind": "moveForward", "distanceM": 1}, {"kind": "greet"}]}
+{"utterance": "앞으로 3미터 가고 춤춰", "steps": [{"kind": "moveForward", "distanceM": 3}, {"kind": "dance"}]}
+{"utterance": "뒤로 돌아서 인사해", "steps": [{"kind": "rotateRight", "degrees": 180}, {"kind": "greet"}]}
+{"utterance": "인사하고 앞으로 1m 가서 하트 하고 멈춰", "steps": [{"kind": "greet"}, {"kind": "moveForward", "distanceM": 1}, {"kind": "heart"}, {"kind": "stop"}]}
+{"utterance": "왼쪽으로 45도씩 8번 돌아", "steps": [{"kind": "repeat", "count": 8, "body": [{"kind": "rotateLeft", "degrees": 45}]}]}
