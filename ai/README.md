@@ -43,3 +43,32 @@ python -m poppy_ai.datagen --out ~/poppy-ai/data/<날짜>/dataset-v1 -n 8000 --s
 
 2026-11-10 생성 결과 (`seed=20261110`, `n=8000`): train 6,784 / val 586 / test 630.
 무작위 후보 14,412개 중 시뮬·한도 거절 5,790, 문장 중복 600, 길이 초과 22.
+
+## 학습 (#129)
+
+- 모델: `Qwen/Qwen2.5-1.5B-Instruct` (Apache-2.0, 모델 카드 `license: apache-2.0` 확인). 비교 후보 `Qwen/Qwen3-1.7B`(Apache-2.0)는 다운로드했으나 사용량 제한으로 학습·평가하지 못함(미측정).
+- QLoRA: 4-bit NF4 + double quant, LoRA r=16/alpha=32, q/k/v/o/gate/up/down, lr 2e-4 cosine, batch 4×accum 4, 2 epoch, bf16, paged AdamW 8bit, GPU 90°C 이상이면 멈추는 콜백.
+- 결과(2026-11-10, RTX 3060 Laptop 6GB): 학습 64.6분(848 step), train loss 0.0155, val loss 0.0035, 최대 GPU 84°C, 피크 메모리 5.09 GB.
+
+```bash
+python -m poppy_ai.train --base Qwen/Qwen2.5-1.5B-Instruct --data ~/poppy-ai/data/<날짜>/dataset-v1 \
+  --out ~/poppy-ai/models/<날짜>/qwen25-1.5b-lora --epochs 2 --batch 4 --grad-accum 4
+```
+
+## 양자화·추론 (#130)
+
+- `python -m poppy_ai.export_gguf --base Qwen/Qwen2.5-1.5B-Instruct --adapter <adapter> --out <dir> --name qwen25-1.5b-poppy` → LoRA 병합 → llama.cpp `convert_hf_to_gguf.py` f16 → Q4_K_M (약 0.99 GB).
+- `poppy_ai/grammar.py` GBNF 로 블록 JSON 형식을 강제하고, 결과를 `validate_ai_steps` 로 다시 검증한다.
+- 추론 서비스: `POPPY_AI_MODEL_PATH=<gguf> uvicorn poppy_ai.server:app --host 127.0.0.1 --port 8090` (`/health`, `/v1/program-drafts`, `/v1/hints`). Server 는 `POPPY_AI_INFERENCE_URL=http://127.0.0.1:8090`. 로봇·Agent 와 통신하지 않는다.
+- llama-cpp-python CUDA 빌드는 `LD_LIBRARY_PATH` 에 venv 의 `nvidia/*/lib` 가 필요하다.
+
+## 평가 (홀드아웃 test 630건, 스키마 제약 디코딩)
+
+| 방법 | JSON 유효 | 정확 일치 | 시뮬 통과 | 지연 p50 / p95 |
+| --- | --- | --- | --- | --- |
+| 파인튜닝 Q4_K_M (제약 디코딩) | 100% | 95.6% | 99.4% | 565 ms / 3,997 ms |
+| 규칙 기반(Client planner 포트) | 90.6% | 22.5% | 89.4% | <1 ms |
+| 베이스 Qwen2.5-1.5B Q4_K_M | 미측정 | 미측정 | 미측정 | 미측정 |
+
+- 베이스 모델·제약 없는 디코딩·손 작성 40문장 평가는 평가 프로세스가 멈춰(제약 없는 생성 단계로 추정) 중단했고 미측정이다. 재현: `python -m poppy_ai.evaluate --method gguf:<base.gguf> --label base --sets test=... manual=data/manual_test.jsonl --out <dir> --modes constrained`.
+- p95 지연 약 4초는 Server 요청 타임아웃(4초) 경계라 튜닝이 필요하다.
