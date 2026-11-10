@@ -101,6 +101,31 @@ class MissionCatalog {
                 ),
             ),
             Mission(
+                id = UUID.fromString("dc7e71a5-236c-4f6e-8ce0-5ad3e2fe2300"),
+                title = "무대 중앙에서 포즈",
+                difficulty = MissionDifficulty.NORMAL,
+                summary = "지정 위치까지 이동한 뒤 멈추고 안전한 프리셋 자세를 실행하는 미션.",
+                description = "지정 위치까지 이동한 뒤 멈추고 안전한 프리셋 자세를 실행하는 미션.",
+                goal = "이동 → 정지 → 포즈 순서를 정확하게 구성한다.",
+                completionCondition = CompletionCondition(
+                    description = listOf(
+                        "목표 지점에 먼저 도착한 뒤 프리셋 실행",
+                        "이동 중 프리셋 실행 금지",
+                        "허용된 프리셋만 사용",
+                    ).joinToString("\n"),
+                ),
+                timeLimitSeconds = null,
+                estimatedSeconds = null,
+                allowedBlocks = listOf(
+                    BlockType.MOVE_FORWARD,
+                    BlockType.TURN_LEFT,
+                    BlockType.TURN_RIGHT,
+                    BlockType.STOP,
+                    BlockType.WAIT,
+                    BlockType.PRESET,
+                ),
+            ),
+            Mission(
                 id = UUID.fromString("2a0af46c-0294-42b4-8cee-4a2f83cb3b58"),
                 title = "집으로 돌아가기",
                 difficulty = MissionDifficulty.NORMAL,

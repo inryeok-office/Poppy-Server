@@ -22,18 +22,19 @@ class MissionControllerTest {
     lateinit var mockMvc: MockMvc
 
     @Test
-    fun `GET missions는 토큰 없이 8개 미션을 원본 순서대로 반환한다`() {
+    fun `GET missions는 토큰 없이 9개 미션을 원본 순서대로 반환한다`() {
         mockMvc.perform(
             get("/api/v1/missions").accept(MediaType.APPLICATION_JSON),
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
-            .andExpect(jsonPath("$.data.missions.length()").value(8))
+            .andExpect(jsonPath("$.data.missions.length()").value(9))
+            .andExpect(jsonPath("$.data.missions[4].title").value("무대 중앙에서 포즈"))
             .andExpect(jsonPath("$.data.missions[0].title").value("로봇 택배 배달"))
             .andExpect(jsonPath("$.data.missions[0].difficulty").value("EASY"))
             .andExpect(jsonPath("$.data.missions[0].missionId").value("f3f450e4-8faf-4d2e-b2aa-6f76ac115412"))
-            .andExpect(jsonPath("$.data.missions[7].title").value("최소 블록 챌린지"))
-            .andExpect(jsonPath("$.data.missions[7].difficulty").value("HARD"))
+            .andExpect(jsonPath("$.data.missions[8].title").value("최소 블록 챌린지"))
+            .andExpect(jsonPath("$.data.missions[8].difficulty").value("HARD"))
             .andExpect(jsonPath("$.error").value(null))
     }
 
