@@ -6,4 +6,5 @@ import team.inreok.poppyserver.domain.session.model.SimulationPass
 interface SimulationPassRepository {
     fun save(pass: SimulationPass): SimulationPass
     fun findById(sessionId: UUID, blockVersion: Long): SimulationPass?
+    fun deleteAllBySessionId(sessionId: UUID)
 }

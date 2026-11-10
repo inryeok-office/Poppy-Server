@@ -4,6 +4,7 @@ import java.util.UUID
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import team.inreok.poppyserver.domain.block.application.BlockProgramParser
 import team.inreok.poppyserver.domain.session.model.SimulationPass
 import team.inreok.poppyserver.global.error.ApplicationException
 import team.inreok.poppyserver.global.error.ErrorCode
@@ -14,6 +15,8 @@ class SimulationPassService(
     private val sessionRepository: SessionRepository,
     private val blockRevisionRepository: BlockRevisionRepository,
     private val simulationPassRepository: SimulationPassRepository,
+    private val blockProgramParser: BlockProgramParser,
+    private val missionBlockGuard: MissionBlockGuard,
 ) {
     @Transactional
     fun recordSimulationPass(sessionId: UUID, blockVersion: Long): SimulationPassRecordResult {
@@ -25,9 +28,9 @@ class SimulationPassService(
         if (blockVersion != session.currentBlockVersion) {
             throw ApplicationException(ErrorCode.SIMULATION_BLOCK_VERSION_STALE)
         }
-        if (blockRevisionRepository.findById(sessionId, blockVersion) == null) {
-            throw ApplicationException(ErrorCode.BLOCK_REVISION_NOT_FOUND)
-        }
+        val revision = blockRevisionRepository.findById(sessionId, blockVersion)
+            ?: throw ApplicationException(ErrorCode.BLOCK_REVISION_NOT_FOUND)
+        missionBlockGuard.ensureAllowed(session, blockProgramParser.parse(revision.document))
         val existing = simulationPassRepository.findById(sessionId, blockVersion)
         val (pass, created) = if (existing != null) {
             existing to false
