@@ -30,6 +30,10 @@ class SimulationPassPersistenceAdapter(
     override fun findById(sessionId: UUID, blockVersion: Long): SimulationPass? =
         simulationPassJpaRepository.findById(SimulationPassEntityId(sessionId, blockVersion)).orElse(null)?.toDomain()
 
+    override fun deleteAllBySessionId(sessionId: UUID) {
+        simulationPassJpaRepository.deleteAllBySessionId(sessionId)
+    }
+
     private fun SimulationPassEntity.toDomain(): SimulationPass = SimulationPass.restore(
         sessionId = requireNotNull(sessionId),
         blockVersion = blockVersion,
