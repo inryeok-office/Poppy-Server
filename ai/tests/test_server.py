@@ -56,3 +56,19 @@ def test_hint_uses_block_number():
 def test_explain_repeat():
     steps = [{"kind": "repeat", "count": 4, "body": [{"kind": "moveForward", "distanceM": 1}, {"kind": "rotateLeft", "degrees": 90}]}]
     assert explain(steps) == "(앞으로 1m 가고 왼쪽으로 90° 돌고) 4번 반복하는 블록을 만들었어요."
+
+
+def test_utterance_without_block_action_is_rejected_before_model():
+    engine = FakeEngine(steps=[{"kind": "moveForward", "distanceM": 1}])
+    client = TestClient(create_app(engine))
+    for utterance in ["밥 먹자", "앉아", "ㅋ"]:
+        assert client.post("/v1/program-drafts", json={"utterance": utterance}).status_code == 422
+    assert engine.calls == []
+
+
+def test_draft_over_total_distance_limit_is_scaled_down():
+    square = [{"kind": "repeat", "count": 4, "body": [{"kind": "moveForward", "distanceM": 2}, {"kind": "rotateLeft", "degrees": 90}]}]
+    client = TestClient(create_app(FakeEngine(steps=square)))
+    body = client.post("/v1/program-drafts", json={"utterance": "네모 모양으로 걸어"}).json()
+    assert body["steps"][0]["body"][0]["distanceM"] == 1.0
+    assert body["steps"][0]["body"][1] == {"kind": "rotateLeft", "degrees": 90}

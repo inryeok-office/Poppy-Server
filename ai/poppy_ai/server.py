@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from .blocks import AI_INPUT_MAX_LENGTH, normalize_utterance
 from .explain import explain
+from .guard import cap_total_distance, is_actionable
 from .hints import hint_for
 
 MODEL_PATH_ENV = "POPPY_AI_MODEL_PATH"
@@ -50,14 +51,17 @@ def create_app(engine=None) -> FastAPI:
         utterance = normalize_utterance(request.utterance)
         if not utterance or len(utterance) > AI_INPUT_MAX_LENGTH:
             raise HTTPException(status_code=400, detail="utterance must be 1..100 characters")
+        if not is_actionable(utterance):
+            raise HTTPException(status_code=422, detail="utterance has no block action")
         engine = get_engine()
         with lock:
             generation = engine.generate(utterance)
         if generation.steps is None:
             raise HTTPException(status_code=502, detail=generation.error or "invalid output")
+        steps = cap_total_distance(generation.steps)
         return {
-            "steps": generation.steps,
-            "explanation": explain(generation.steps),
+            "steps": steps,
+            "explanation": explain(steps),
             "model": os.path.basename(getattr(engine, "model_path", "")),
             "latencyMs": round(generation.latency_ms),
         }
