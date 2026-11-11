@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.MediaType
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -52,6 +53,26 @@ class ExecutionSseService(
             throw exception
         }
         return emitter
+    }
+
+    /**
+     * 이벤트가 없는 동안에도 SSE 주석 줄(`:keepalive`)을 보내 연결이 유휴로 끊기지 않게 한다.
+     * 중간 프록시(예: Next.js 재작성 프록시는 기본 30초 무응답이면 연결을 끊는다)가 있으면
+     * 하트비트가 없을 때 30초마다 끊기고 다시 붙는다. 클라이언트는 주석 줄을 무시한다.
+     */
+    @Scheduled(fixedDelayString = "\${poppy.execution.sse-heartbeat-milliseconds:15000}")
+    fun sendHeartbeat() {
+        emitters.forEach { (sessionId, sessionEmitters) ->
+            sessionEmitters.toList().forEach { emitter ->
+                try {
+                    emitter.send(SseEmitter.event().comment(HEARTBEAT_COMMENT))
+                } catch (_: IOException) {
+                    remove(sessionId, emitter)
+                } catch (_: IllegalStateException) {
+                    remove(sessionId, emitter)
+                }
+            }
+        }
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -105,6 +126,7 @@ class ExecutionSseService(
 
     companion object {
         const val EVENT_NAME = "execution-status"
+        const val HEARTBEAT_COMMENT = "keepalive"
         private val logger = LoggerFactory.getLogger(ExecutionSseService::class.java)
     }
 }
