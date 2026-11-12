@@ -35,7 +35,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@SpringBootTest
+@SpringBootTest(properties = ["poppy.execution.auto-stand-first=false"])
 @AutoConfigureMockMvc
 class ExecutionRequestIntegrationTest : PostgresIntegrationTest() {
 

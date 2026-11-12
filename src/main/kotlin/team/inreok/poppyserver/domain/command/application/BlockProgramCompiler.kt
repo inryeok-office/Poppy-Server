@@ -1,5 +1,6 @@
 package team.inreok.poppyserver.domain.command.application
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import team.inreok.poppyserver.domain.block.application.BlockProgramValidationError
 import team.inreok.poppyserver.domain.block.application.BlockProgramValidator
@@ -18,6 +19,9 @@ import team.inreok.poppyserver.domain.command.model.TurnDirection
 @Component
 class BlockProgramCompiler(
     private val blockProgramValidator: BlockProgramValidator,
+    // 실기(2026-11-12): 쉬고 있던 GO2 는 실행의 첫 SDK 명령을 무시한다(첫 회전·첫 인사가 사라짐).
+    // 실행 맨 앞에 보이지 않는 일어서기(StandUp + BalanceStand)를 넣어 그 명령이 대신 소모되게 한다.
+    @Value("\${poppy.execution.auto-stand-first:true}") private val autoStandFirst: Boolean = false,
 ) {
     fun compile(program: BlockProgram): HighLevelCommandProgram {
         if (program.schemaVersion != SUPPORTED_SCHEMA_VERSION) {
@@ -48,8 +52,23 @@ class BlockProgramCompiler(
         appendCommands(program.blocks, commands)
         return HighLevelCommandProgram(
             protocolVersion = HighLevelCommandProtocolParser.SUPPORTED_PROTOCOL_VERSION,
-            commands = commands,
+            commands = if (autoStandFirst) withLeadingStand(commands) else commands,
         )
+    }
+
+    private fun withLeadingStand(commands: List<HighLevelCommand>): List<HighLevelCommand> {
+        if (commands.isEmpty()) return commands
+        val first = commands.first()
+        val alreadyStanding = first.type == CommandType.POSTURE &&
+            first.parameters == HighLevelCommandParameters.PostureCommand(Posture.STAND)
+        if (alreadyStanding) return commands
+        val stand = HighLevelCommand(
+            sequence = 0,
+            sourceBlockId = AUTO_STAND_SOURCE_BLOCK_ID,
+            type = CommandType.POSTURE,
+            parameters = HighLevelCommandParameters.PostureCommand(Posture.STAND),
+        )
+        return listOf(stand) + commands.mapIndexed { index, command -> command.copy(sequence = index + 1) }
     }
 
     private fun countCommands(blocks: List<BlockInstance>): Long {
@@ -215,6 +234,7 @@ class BlockProgramCompiler(
 
     companion object {
         const val SUPPORTED_SCHEMA_VERSION = 1
+        const val AUTO_STAND_SOURCE_BLOCK_ID = "auto-stand-first"
     }
 }
 
