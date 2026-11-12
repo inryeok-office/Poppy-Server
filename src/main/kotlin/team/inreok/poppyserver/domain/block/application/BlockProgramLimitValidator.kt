@@ -1,16 +1,21 @@
 package team.inreok.poppyserver.domain.block.application
 
 import org.springframework.stereotype.Component
+import team.inreok.poppyserver.domain.arena.application.ArenaSettingsProvider
+import team.inreok.poppyserver.domain.arena.application.DefaultArenaSettingsProvider
 import team.inreok.poppyserver.domain.block.model.BlockInstance
 import team.inreok.poppyserver.domain.block.model.BlockParameters
 import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.block.model.BlockType
 
 @Component
-class BlockProgramLimitValidator {
+class BlockProgramLimitValidator(
+    private val arenaSettingsProvider: ArenaSettingsProvider = DefaultArenaSettingsProvider,
+) {
     fun validate(program: BlockProgram): BlockProgramValidationResult {
         val errors = mutableListOf<BlockProgramValidationError>()
-        collectParameterErrors(program.blocks, "blocks", errors)
+        val maxMoveMeters = arenaSettingsProvider.current().maxMovePerCommandM
+        collectParameterErrors(program.blocks, "blocks", maxMoveMeters, errors)
 
         if (errors.isEmpty()) {
             val totals = ExecutionTotals().also { it.accumulate(program.blocks) }
@@ -34,20 +39,21 @@ class BlockProgramLimitValidator {
     private fun collectParameterErrors(
         blocks: List<BlockInstance>,
         path: String,
+        maxMoveMeters: Double,
         errors: MutableList<BlockProgramValidationError>,
     ) {
         blocks.forEachIndexed { index, block ->
             val blockPath = "$path[$index]"
-            parameterError(block, blockPath)?.let { errors += it }
-            block.children?.let { collectParameterErrors(it, "$blockPath.children", errors) }
+            parameterError(block, blockPath, maxMoveMeters)?.let { errors += it }
+            block.children?.let { collectParameterErrors(it, "$blockPath.children", maxMoveMeters, errors) }
         }
     }
 
-    private fun parameterError(block: BlockInstance, path: String): BlockProgramValidationError? {
+    private fun parameterError(block: BlockInstance, path: String, maxMoveMeters: Double): BlockProgramValidationError? {
         val parameters = block.parameters
         val inRange = when {
             block.type in MOVE_TYPES && parameters is BlockParameters.DistanceMeters ->
-                parameters.value in BlockProgramLimits.MIN_DISTANCE_METERS..BlockProgramLimits.MAX_DISTANCE_METERS
+                parameters.value in BlockProgramLimits.MIN_DISTANCE_METERS..maxMoveMeters
             block.type in TURN_TYPES && parameters is BlockParameters.AngleDegrees ->
                 parameters.value in BlockProgramLimits.MIN_ANGLE_DEGREES..BlockProgramLimits.MAX_ANGLE_DEGREES
             block.type == BlockType.WAIT && parameters is BlockParameters.DurationSeconds ->
