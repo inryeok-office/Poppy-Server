@@ -1,17 +1,22 @@
 package team.inreok.poppyserver.domain.block.application
 
 import org.springframework.stereotype.Component
+import team.inreok.poppyserver.domain.arena.application.ArenaSettingsProvider
+import team.inreok.poppyserver.domain.arena.application.DefaultArenaSettingsProvider
 import team.inreok.poppyserver.domain.block.model.BlockCategory
 import team.inreok.poppyserver.domain.block.model.BlockDefinition
 import team.inreok.poppyserver.domain.block.model.BlockType
 import team.inreok.poppyserver.domain.block.model.ParameterDefinition
 
 @Component
-class BlockDefinitionCatalog {
-    fun list(): List<BlockDefinition> = DEFINITIONS
+class BlockDefinitionCatalog(
+    private val arenaSettingsProvider: ArenaSettingsProvider = DefaultArenaSettingsProvider,
+) {
+    /** 이동 블록의 최대 거리는 현재 체험 공간(1회 이동 한도)을 따른다. */
+    fun list(): List<BlockDefinition> = definitions(arenaSettingsProvider.current().maxMovePerCommandM)
 
     companion object {
-        private val DEFINITIONS = listOf(
+        private fun definitions(maxMoveMeters: Double): List<BlockDefinition> = listOf(
             definition(BlockType.START, "시작"),
             definition(
                 BlockType.WAIT,
@@ -33,14 +38,14 @@ class BlockDefinitionCatalog {
                 "앞으로 이동",
                 unit = "m",
                 min = BlockProgramLimits.MIN_DISTANCE_METERS,
-                max = BlockProgramLimits.MAX_DISTANCE_METERS,
+                max = maxMoveMeters,
             ),
             definition(
                 BlockType.MOVE_BACKWARD,
                 "뒤로 이동",
                 unit = "m",
                 min = BlockProgramLimits.MIN_DISTANCE_METERS,
-                max = BlockProgramLimits.MAX_DISTANCE_METERS,
+                max = maxMoveMeters,
             ),
             definition(
                 BlockType.TURN_LEFT,

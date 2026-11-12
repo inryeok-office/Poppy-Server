@@ -5,6 +5,8 @@ import team.inreok.poppyserver.domain.block.model.BlockInstance
 import team.inreok.poppyserver.domain.block.model.BlockParameters
 import team.inreok.poppyserver.domain.block.model.BlockProgram
 import team.inreok.poppyserver.domain.block.model.BlockType
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BlockProgramLimitValidatorTest {
@@ -128,4 +130,41 @@ class BlockProgramLimitValidatorTest {
         parameters: BlockParameters = BlockParameters.None,
         children: List<BlockInstance>? = null,
     ) = BlockInstance(id, type, parameters, children)
+}
+
+class BlockProgramLimitValidatorArenaTest {
+    private val booth = team.inreok.poppyserver.domain.arena.application.ArenaSettingsProvider {
+        team.inreok.poppyserver.domain.arena.model.ArenaPresets.ALL.getValue(
+            team.inreok.poppyserver.domain.arena.model.ArenaPresets.BOOTH_3X3,
+        )
+    }
+
+    private fun move(meters: Double) = BlockProgram(
+        schemaVersion = 1,
+        blocks = listOf(
+            BlockInstance(id = "m", type = BlockType.MOVE_FORWARD, parameters = BlockParameters.DistanceMeters(meters)),
+        ),
+    )
+
+    @Test
+    fun `3x3 부스에서는 1회 이동 1_2m 까지만 허용한다`() {
+        val validator = BlockProgramLimitValidator(booth)
+        assertTrue(validator.validate(move(1.2)).isValid)
+        assertFalse(validator.validate(move(1.3)).isValid)
+        assertFalse(validator.validate(move(3.0)).isValid)
+    }
+
+    @Test
+    fun `설정이 없으면(기본 6x6) 3m 까지 허용하는 기존 동작이 그대로다`() {
+        val validator = BlockProgramLimitValidator()
+        assertTrue(validator.validate(move(3.0)).isValid)
+        assertFalse(validator.validate(move(3.1)).isValid)
+    }
+
+    @Test
+    fun `블록 정의 카탈로그의 이동 최대값도 공간을 따른다`() {
+        fun max(catalog: BlockDefinitionCatalog) = catalog.list().first { it.type == BlockType.MOVE_FORWARD }.parameters.single().max
+        assertEquals(1.2, max(BlockDefinitionCatalog(booth)))
+        assertEquals(3.0, max(BlockDefinitionCatalog()))
+    }
 }
