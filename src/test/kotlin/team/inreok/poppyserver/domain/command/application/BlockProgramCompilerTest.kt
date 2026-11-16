@@ -21,6 +21,35 @@ class BlockProgramCompilerTest {
     private val serializer = HighLevelCommandProtocolSerializer(objectMapper)
     private val parser = HighLevelCommandProtocolParser(objectMapper)
 
+    private val autoStand = BlockProgramCompiler(BlockProgramValidator(), autoStandFirst = true)
+
+    @Test
+    fun `auto stand first prepends one hidden STAND and renumbers sequences`() {
+        val result = autoStand.compile(
+            program(
+                block("start", BlockType.START),
+                block("left", BlockType.TURN_LEFT, BlockParameters.AngleDegrees(90.0)),
+                block("forward", BlockType.MOVE_FORWARD, BlockParameters.DistanceMeters(1.0)),
+                block("end", BlockType.END),
+            ),
+        )
+        assertEquals(listOf(0, 1, 2), result.commands.map { it.sequence })
+        assertEquals("auto-stand-first", result.commands[0].sourceBlockId)
+        assertEquals(HighLevelCommandParameters.PostureCommand(Posture.STAND), result.commands[0].parameters)
+        assertEquals(listOf("left", "forward"), result.commands.drop(1).map { it.sourceBlockId })
+        parser.parse(serializer.serialize(result))
+    }
+
+    @Test
+    fun `auto stand first does not duplicate an explicit leading STAND or touch empty programs`() {
+        val leadingStand = autoStand.compile(
+            program(block("start", BlockType.START), block("stand", BlockType.STAND), block("end", BlockType.END)),
+        )
+        assertEquals(listOf("stand"), leadingStand.commands.map { it.sourceBlockId })
+        val empty = autoStand.compile(program(block("start", BlockType.START), block("end", BlockType.END)))
+        assertEquals(emptyList(), empty.commands)
+    }
+
     @Test
     fun `START and END compile to an empty command list`() {
         val result = compiler.compile(program(block("start", BlockType.START), block("end", BlockType.END)))
