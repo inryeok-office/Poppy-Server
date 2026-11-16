@@ -10,6 +10,7 @@ class AiAssistantService(
     private val inferenceClient: AiInferenceClient,
     private val stepValidator: AiDraftStepValidator,
     private val textPolicy: AiTextPolicy,
+    private val arenaAdjuster: AiDraftArenaAdjuster = AiDraftArenaAdjuster(),
 ) {
     fun draftProgram(rawUtterance: String): AiProgramDraftResult {
         val utterance = textPolicy.normalize(rawUtterance)
@@ -26,7 +27,10 @@ class AiAssistantService(
             log.warn("AI draft rejected by contract validation: {}", exception.message)
             throw ApplicationException(ErrorCode.AI_UNAVAILABLE)
         }
-        return AiProgramDraftResult(steps = steps, explanation = safeExplanation(draft.explanation))
+        val adjusted = arenaAdjuster.adjust(utterance, steps)
+        // 거리를 공간에 맞게 바꿨으면 모델 설명(바꾸기 전 거리)이 틀리므로 바꾼 이유로 대신한다.
+        val explanation = adjusted.note ?: safeExplanation(draft.explanation)
+        return AiProgramDraftResult(steps = adjusted.steps, explanation = explanation)
     }
 
     fun hint(command: AiHintCommand): String {

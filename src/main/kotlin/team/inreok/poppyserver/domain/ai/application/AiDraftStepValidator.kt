@@ -1,16 +1,12 @@
 package team.inreok.poppyserver.domain.ai.application
 
 import org.springframework.stereotype.Component
-import team.inreok.poppyserver.domain.arena.application.ArenaSettingsProvider
-import team.inreok.poppyserver.domain.arena.application.DefaultArenaSettingsProvider
 import tools.jackson.databind.JsonNode
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
 @Component
-class AiDraftStepValidator(
-    private val arenaSettingsProvider: ArenaSettingsProvider = DefaultArenaSettingsProvider,
-) {
+class AiDraftStepValidator {
     fun validate(steps: JsonNode?): List<Map<String, Any>> {
         if (steps == null || !steps.isArray || steps.isEmpty) {
             throw InvalidAiDraftException("steps must be a non-empty array")
@@ -27,7 +23,7 @@ class AiDraftStepValidator(
         val kind = node.get("kind")?.takeIf { it.isString }?.asString()
             ?: throw InvalidAiDraftException("kind is required")
         return when (kind) {
-            "moveForward", "move" -> mapOf("kind" to kind, "distanceM" to decimal(node.get("distanceM"), MIN_DISTANCE, arenaSettingsProvider.current().maxMovePerCommandM))
+            "moveForward", "move" -> mapOf("kind" to kind, "distanceM" to decimal(node.get("distanceM"), MIN_DISTANCE, MAX_DISTANCE))
             "rotateLeft", "rotateRight" -> mapOf("kind" to kind, "degrees" to integer(node.get("degrees"), 1, 360))
             "wait" -> mapOf("kind" to kind, "seconds" to integer(node.get("seconds"), 1, 10))
             in SIMPLE_KINDS -> mapOf("kind" to kind)
@@ -73,6 +69,9 @@ class AiDraftStepValidator(
     private companion object {
         const val MAX_BLOCKS = 12
         const val MIN_DISTANCE = 0.1
+
+        // 모델 출력 형식 검증은 하드 상한(3 m)으로 한다. 공간별 1회 최대 이동은 AiDraftArenaAdjuster 가 맞춘다.
+        const val MAX_DISTANCE = 3.0
         const val EPSILON = 1e-6
         val SIMPLE_KINDS = setOf("stop", "standUp", "greet", "heart", "dance")
     }
