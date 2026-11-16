@@ -89,7 +89,9 @@ jobs:
               image=$(sudo env POPPY_SERVER_IMAGE_TAG="$tag" docker compose -p poppy-server \
                 --project-directory "$COMPOSE_DIR" -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
                 config --images app 2>/dev/null) || { echo "ERROR: cannot resolve production app image. Aborting deployment."; exit 1; }
-              if [ "$image" != "poppy-server:$tag" ]; then
+              # app 의 depends_on(postgres) 때문에 compose 버전에 따라 config --images app 이
+              # 의존 서비스 이미지(postgres:16-alpine)도 함께 출력한다 → 줄 단위로 정확히 일치하는 줄을 찾는다.
+              if ! printf '%s\n' "$image" | grep -Fxq "poppy-server:$tag"; then
                 echo "ERROR: production app image does not use the expected tag. Deploy manually."
                 exit 1
               fi
